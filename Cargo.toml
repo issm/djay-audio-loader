@@ -8,3 +8,18 @@ name = "drag-into-djay"
 path = "src/main.rs"
 
 [dependencies]
+# CLI
+clap = { version = "4.6", features = ["derive"] }
+
+# Accessibility / Core Foundation (AXUIElement 系)
+core-foundation = "0.10"
+
+# CGEvent によるドラッグ&ドロップ
+core-graphics = "0.25"
+
+# NSRunningApplication (isActive, bundleIdentifier)
+objc2 = "0.6"
+objc2-app-kit = "0.3"
+
+# エラーハンドリング
+anyhow = "1.0"
