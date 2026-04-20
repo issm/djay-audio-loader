@@ -48,6 +48,8 @@ pub struct Config {
     pub drag_binary: Option<String>,
     /// --drop-delay に渡す値 [ms]
     pub drop_delay: u64,
+    /// --no-activate を drag-into-djay に渡すか
+    pub no_activate: bool,
 }
 
 impl Config {
@@ -76,6 +78,7 @@ impl Config {
             },
             drag_binary: None,
             drop_delay: 250,
+            no_activate: true,
         }
     }
 }

@@ -19,7 +19,7 @@ fn main() -> Result<()> {
         track.source, track.title, track.file_path
     );
 
-    drag::drag_to_djay(&track, args.deck, args.drop_delay)?;
+    drag::drag_to_djay(&track, args.deck, args.drop_delay, args.no_activate)?;
     eprintln!("[3] ドラッグ完了: デッキ {} にロードしました", args.deck);
 
     Ok(())

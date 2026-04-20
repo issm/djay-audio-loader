@@ -195,11 +195,13 @@ fn activate_source(source: &str) {
         .ok();
 }
 
-fn simulate_drag(src: CGPoint, dst: CGPoint, source: &str, drop_delay_ms: u64) {
+fn simulate_drag(src: CGPoint, dst: CGPoint, source: &str, drop_delay_ms: u64, no_activate: bool) {
     unsafe {
-        // ドラッグ元アプリをアクティブにしてから MouseDown
-        activate_source(source);
-        sleep(Duration::from_millis(200));
+        if !no_activate {
+            // ドラッグ元アプリをアクティブにしてから MouseDown
+            activate_source(source);
+            sleep(Duration::from_millis(200));
+        }
 
         let down = CGEventCreateMouseEvent(
             std::ptr::null_mut(),
@@ -214,7 +216,7 @@ fn simulate_drag(src: CGPoint, dst: CGPoint, source: &str, drop_delay_ms: u64) {
 
         // ドラッグ開始後に djay Pro をアクティブにする
         activate_djay();
-        sleep(Duration::from_millis(200));
+        sleep(Duration::from_millis(if no_activate { 100 } else { 200 }));
 
         // Drag（中間点を数ステップ挟む）
         let steps = 10usize;
@@ -249,10 +251,13 @@ fn simulate_drag(src: CGPoint, dst: CGPoint, source: &str, drop_delay_ms: u64) {
 
 // ---- 公開 API --------------------------------------------------------------
 
-pub fn drag_to_djay(track: &TrackInfo, deck: u8, drop_delay_ms: u64) -> Result<()> {
+pub fn drag_to_djay(
+    track: &TrackInfo,
+    deck: u8,
+    drop_delay_ms: u64,
+    no_activate: bool,
+) -> Result<()> {
     let dst = get_waveform_center(deck)?;
-    // 行の AXSize.width はスクロール領域込みで非常に大きくなる場合があるため、
-    // x は position.x + 小オフセット（タイトル列付近）、y は行の垂直中央を使う
     let src = CGPoint::new(
         track.position.x + 100.0,
         track.position.y + track.size.height / 2.0,
@@ -261,6 +266,6 @@ pub fn drag_to_djay(track: &TrackInfo, deck: u8, drop_delay_ms: u64) -> Result<(
         "ドラッグ: ({:.0},{:.0}) → ({:.0},{:.0})",
         src.x, src.y, dst.x, dst.y
     );
-    simulate_drag(src, dst, &track.source, drop_delay_ms);
+    simulate_drag(src, dst, &track.source, drop_delay_ms, no_activate);
     Ok(())
 }

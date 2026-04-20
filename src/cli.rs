@@ -13,6 +13,10 @@ pub struct Cli {
     /// ドロップ前のホバー待機時間 [ms]
     #[arg(long, value_name = "MS", default_value_t = 250)]
     pub drop_delay: u64,
+
+    /// アプリのアクティブ化をスキップする（helper から呼ぶ場合など）
+    #[arg(long, default_value_t = false)]
+    pub no_activate: bool,
 }
 
 pub fn parse() -> Cli {
