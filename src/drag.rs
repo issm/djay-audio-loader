@@ -217,7 +217,7 @@ fn simulate_drag(src: CGPoint, dst: CGPoint, source: &str, drop_delay_ms: u64) {
         sleep(Duration::from_millis(200));
 
         // Drag（中間点を数ステップ挟む）
-        let steps = 20usize;
+        let steps = 10usize;
         for i in 1..=steps {
             let t = i as f64 / steps as f64;
             let mid = CGPoint::new(src.x + (dst.x - src.x) * t, src.y + (dst.y - src.y) * t);
