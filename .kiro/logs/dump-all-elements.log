@@ -1,0 +1,309 @@
+group | デッキ | pos=0,81 | size=1920x712
+button | ボタン | pos=15,92 | size=92x91
+static text | 曲名, デッキ 1 | pos=122,94 | size=639x25
+button | Elapsed time, デッキ 1 | pos=776,94 | size=81x46
+button | キー, デッキ 1 | pos=890,94 | size=54x46
+UI element | 波形オーバービュー, デッキ 1 | pos=122,155 | size=822x29
+button | ボタン | pos=1813,92 | size=91x91
+static text | 曲名, デッキ 2 | pos=976,94 | size=639x25
+button | Elapsed time, デッキ 2 | pos=1630,94 | size=81x46
+button | キー, デッキ 2 | pos=1744,94 | size=54x46
+UI element | 波形オーバービュー, デッキ 2 | pos=976,155 | size=822x29
+static text | 曲名, デッキ 1 | pos=122,94 | size=639x25
+button | 同期する, デッキ 1 | pos=16,205 | size=81x38
+button | 140.0, デッキ 1 | pos=0,250 | size=114x27
+button | 0.0%, デッキ 1 | pos=0,277 | size=114x22
+slider | テンポ, デッキ 1 | pos=19,303 | size=75x93
+button | Key Lock on-off, デッキ 1 | pos=94,341 | size=16x17
+button | Pitch Bend -, デッキ 1 | pos=24,395 | size=33x33
+button | Pitch Bend +, デッキ 1 | pos=56,395 | size=33x33
+button | Quantize, デッキ 1 | pos=122,197 | size=17x27
+button | Shows quantize options, デッキ 1 | pos=145,197 | size=22x27
+button | Cue Points, デッキ 1 | pos=212,194 | size=54x33
+button | ルーピング, デッキ 1 | pos=266,194 | size=54x33
+button | FX, デッキ 1 | pos=319,194 | size=54x33
+button | Cuepoint Range, デッキ 1 | pos=403,194 | size=33x33
+button | 編集, デッキ 1 | pos=436,199 | size=32x22
+button | ボタン | pos=117,229 | size=84x49
+button | Cue 1, デッキ 1 | pos=117,279 | size=84x49
+button | Cue 2, デッキ 1 | pos=203,227 | size=90x104
+button | Cue 3, デッキ 1 | pos=292,227 | size=90x104
+button | ボタン | pos=384,229 | size=84x49
+button | Cue 4, デッキ 1 | pos=384,279 | size=84x49
+button | Cue 5, デッキ 1 | pos=114,330 | size=90x103
+button | Cue 6, デッキ 1 | pos=203,330 | size=90x103
+button | Cue 7, デッキ 1 | pos=292,330 | size=90x103
+button | Cue 8, デッキ 1 | pos=381,330 | size=90x103
+slider | フィルター, デッキ 1 | pos=498,213 | size=33x32
+slider | 高EQ, デッキ 1 | pos=498,271 | size=33x33
+slider | 中EQ, デッキ 1 | pos=498,321 | size=33x33
+slider | 低EQ, デッキ 1 | pos=498,371 | size=33x33
+button | EQ Type, デッキ 1 | pos=549,215 | size=41x22
+slider | ゲイン, デッキ 1 | pos=553,250 | size=33x33
+slider | ラインの音量, デッキ 1 | pos=537,290 | size=65x127
+UI element | 波形, デッキ 1 | pos=613,194 | size=694x119
+button | 波形オプション, デッキ 1 | pos=616,199 | size=48x33
+button | Edit grid, デッキ 1 | pos=624,275 | size=32x33
+UI element | 波形, デッキ 2 | pos=613,314 | size=694x119
+button | 波形オプション, デッキ 2 | pos=1256,319 | size=48x33
+button | Edit grid, デッキ 2 | pos=1264,395 | size=32x33
+static text | 曲名, デッキ 2 | pos=976,94 | size=639x25
+button | 同期する, デッキ 2 | pos=1823,205 | size=81x38
+button | 135.0, デッキ 2 | pos=1806,250 | size=114x27
+button | 0.0%, デッキ 2 | pos=1806,277 | size=114x22
+slider | テンポ, デッキ 2 | pos=1826,303 | size=75x93
+button | Key Lock on-off, デッキ 2 | pos=1810,341 | size=16x17
+button | Pitch Bend -, デッキ 2 | pos=1831,395 | size=33x33
+button | Pitch Bend +, デッキ 2 | pos=1863,395 | size=33x33
+button | Quantize, デッキ 2 | pos=1457,197 | size=17x27
+button | Shows quantize options, デッキ 2 | pos=1480,197 | size=22x27
+button | Cue Points, デッキ 2 | pos=1547,194 | size=54x33
+button | ルーピング, デッキ 2 | pos=1600,194 | size=54x33
+button | FX, デッキ 2 | pos=1654,194 | size=54x33
+button | Cuepoint Range, デッキ 2 | pos=1738,194 | size=33x33
+button | 編集, デッキ 2 | pos=1770,199 | size=33x22
+button | Cue 1, デッキ 2 | pos=1449,227 | size=90x104
+button | Cue 2, デッキ 2 | pos=1538,227 | size=90x104
+button | Cue 3, デッキ 2 | pos=1627,227 | size=90x104
+button | ボタン | pos=1719,229 | size=84x49
+button | Cue 4, デッキ 2 | pos=1719,279 | size=84x49
+button | Cue 5, デッキ 2 | pos=1449,330 | size=90x103
+button | Cue 6, デッキ 2 | pos=1538,330 | size=90x103
+button | Cue 7, デッキ 2 | pos=1627,330 | size=90x103
+button | ボタン | pos=1719,331 | size=84x50
+button | Cue 8, デッキ 2 | pos=1719,381 | size=84x50
+slider | フィルター, デッキ 2 | pos=1389,213 | size=33x32
+slider | 高EQ, デッキ 2 | pos=1389,271 | size=33x33
+slider | 中EQ, デッキ 2 | pos=1389,321 | size=33x33
+slider | 低EQ, デッキ 2 | pos=1389,371 | size=33x33
+button | EQ Type, デッキ 2 | pos=1330,215 | size=41x22
+slider | ゲイン, デッキ 2 | pos=1334,250 | size=33x33
+slider | ラインの音量, デッキ 2 | pos=1318,290 | size=65x127
+button | Play / Pause, デッキ 1 | pos=15,454 | size=87x43
+button | CUE, デッキ 1 | pos=133,454 | size=86x43
+button | Loop Half, デッキ 1 | pos=250,454 | size=33x43
+button | ループ, デッキ 1 | pos=281,454 | size=81x43
+button | Loop Double, デッキ 1 | pos=360,454 | size=32x43
+button | Instrumental, デッキ 1 | pos=603,454 | size=68x43
+button | Acapella, デッキ 1 | pos=669,454 | size=67x43
+button | ボタン | pos=743,465 | size=23x22
+slider | クロスフェーダ | pos=853,443 | size=214x65
+button | ボタン | pos=1081,462 | size=27x27
+button | Play / Pause, デッキ 2 | pos=1818,454 | size=86x43
+button | CUE, デッキ 2 | pos=1701,454 | size=86x43
+button | Loop Half, デッキ 2 | pos=1528,454 | size=32x43
+button | ループ, デッキ 1 | pos=281,454 | size=81x43
+button | Loop Double, デッキ 2 | pos=1637,454 | size=33x43
+button | Instrumental, デッキ 2 | pos=1184,454 | size=67x43
+button | Acapella, デッキ 2 | pos=1249,454 | size=68x43
+button | ボタン | pos=1324,465 | size=22x22
+button | Previous, FX 1, デッキ 1 | pos=0,518 | size=43x33
+button | Echo, FX 1, デッキ 1 | pos=42,518 | size=191x33
+button | Next, FX 1, デッキ 1 | pos=232,518 | size=44x33
+button | Enabled, FX 1, デッキ 1 | pos=15,561 | size=44x33
+button | FX 1 Parameter minus, デッキ 1 | pos=69,556 | size=31x43
+button | FX 1 Parameter plus, デッキ 1 | pos=159,556 | size=32x43
+slider | Wet/dry, FX 1, デッキ 1 | pos=219,561 | size=33x33
+button | Previous, FX 2, デッキ 1 | pos=276,518 | size=44x33
+button | Flanger, FX 2, デッキ 1 | pos=319,518 | size=191x33
+button | Next, FX 2, デッキ 1 | pos=509,518 | size=44x33
+button | Enabled, FX 2, デッキ 1 | pos=292,561 | size=44x33
+slider | Parameter, FX 2, デッキ 1 | pos=351,556 | size=117x43
+slider | Wet/dry, FX 2, デッキ 1 | pos=496,561 | size=33x33
+button | Previous, FX 3, デッキ 1 | pos=553,518 | size=44x33
+button | Bit Crusher, FX 3, デッキ 1 | pos=596,518 | size=191x33
+button | Next, FX 3, デッキ 1 | pos=786,518 | size=44x33
+button | Enabled, FX 3, デッキ 1 | pos=569,561 | size=44x33
+slider | Parameter, FX 3, デッキ 1 | pos=628,556 | size=116x43
+slider | Wet/dry, FX 3, デッキ 1 | pos=773,561 | size=33x33
+button | Manual FX | pos=885,561 | size=75x32
+button | Instant FX | pos=960,561 | size=75x32
+button | Previous, FX 1, デッキ 2 | pos=1090,518 | size=44x33
+button | Echo, FX 1, デッキ 2 | pos=1133,518 | size=191x33
+button | Next, FX 1, デッキ 2 | pos=1323,518 | size=44x33
+button | Enabled, FX 1, デッキ 2 | pos=1106,561 | size=44x33
+button | FX 1 Parameter minus, デッキ 2 | pos=1160,556 | size=31x43
+button | FX 1 Parameter plus, デッキ 2 | pos=1250,556 | size=31x43
+slider | Wet/dry, FX 1, デッキ 2 | pos=1310,561 | size=33x33
+button | Previous, FX 2, デッキ 2 | pos=1367,518 | size=44x33
+button | Flanger, FX 2, デッキ 2 | pos=1410,518 | size=191x33
+button | Next, FX 2, デッキ 2 | pos=1600,518 | size=44x33
+button | Enabled, FX 2, デッキ 2 | pos=1383,561 | size=44x33
+slider | Parameter, FX 2, デッキ 2 | pos=1442,556 | size=116x43
+slider | Wet/dry, FX 2, デッキ 2 | pos=1587,561 | size=33x33
+button | Previous, FX 3, デッキ 2 | pos=1644,518 | size=44x33
+button | Bit Crusher, FX 3, デッキ 2 | pos=1687,518 | size=191x33
+button | Next, FX 3, デッキ 2 | pos=1877,518 | size=43x33
+button | Enabled, FX 3, デッキ 2 | pos=1660,561 | size=44x33
+slider | Parameter, FX 3, デッキ 2 | pos=1719,556 | size=116x43
+slider | Wet/dry, FX 3, デッキ 2 | pos=1864,561 | size=32x33
+slider | サンプラー音量 | pos=42,608 | size=161x44
+button | Metronome | pos=218,613 | size=54x33
+button | 124.0 | pos=288,613 | size=102x33
+button | Record | pos=405,613 | size=54x33
+button | オプション | pos=458,613 | size=33x33
+button | Sampler | pos=902,613 | size=54x33
+button | Looper | pos=964,613 | size=54x33
+button | Essentials | pos=1642,613 | size=193x33
+button | 編集 | pos=1850,613 | size=54x33
+button | Air Horn | pos=0,657 | size=240x42
+button | Uhh | pos=240,657 | size=240x42
+button | Echo Bleep | pos=480,657 | size=240x42
+button | Chord 1 | pos=720,657 | size=240x42
+button | Spaceship | pos=960,657 | size=240x42
+button | Impact | pos=1200,657 | size=240x42
+button | Chord 2 | pos=1440,657 | size=240x42
+button | Radiobytes | pos=1680,657 | size=240x42
+button | Drum Hat | pos=0,699 | size=240x43
+button | Cymbal | pos=240,699 | size=240x43
+button | Drum Kick | pos=480,699 | size=240x43
+button | Drum Snare | pos=720,699 | size=240x43
+button | Vox 1 | pos=960,699 | size=240x43
+button | DJ | pos=1200,699 | size=240x43
+button | House Kick | pos=1440,699 | size=240x43
+button | House Clap | pos=1680,699 | size=240x43
+splitter group | グループを分割 | pos=61,742 | size=1859x97
+splitter group | グループを分割 | pos=61,742 | size=1558x97
+splitter group | グループを分割 | pos=61,742 | size=1558x97
+splitter | スプリッタ | pos=61,741 | size=1558x1
+splitter group | グループを分割 | pos=61,742 | size=1558x97
+button | ボタン | pos=58,740 | size=129x37
+button | ボタン | pos=185,740 | size=129x37
+scroll area | スクロール領域 | pos=61,777 | size=250x62
+static text | テキスト | pos=80,788 | size=74x18
+menu button | メニューボタン | pos=263,780 | size=34x34
+outline | アウトライン | pos=60,816 | size=237x64
+row | アウトライン行 | pos=61,817 | size=235x31
+UI element | セル | pos=61,817 | size=235x31
+static text | テキスト | pos=103,824 | size=184x17
+row | アウトライン行 | pos=61,848 | size=235x31
+UI element | セル | pos=61,848 | size=235x31
+static text | テキスト | pos=103,855 | size=184x17
+column | 列 | pos=61,817 | size=235x62
+splitter | スプリッタ | pos=311,742 | size=1x97
+static text | テキスト | pos=331,750 | size=74x18
+static text | テキスト | pos=413,750 | size=2x18
+button | FilterBarTitle | pos=1243,747 | size=24x24
+button | Compact grid | pos=1306,747 | size=24x24
+button | Collection | pos=1336,747 | size=24x24
+text field | マイコレクションで検索 | pos=1378,747 | size=222x24
+button | マイコレクションで検索 | pos=1380,748 | size=25x22
+scroll area | スクロール領域 | pos=322,777 | size=1287x62
+table | ひょう | pos=311,800 | size=1736x25
+column | 列 | pos=312,801 | size=33x23
+column | 列 | pos=345,801 | size=43x23
+column | 列 | pos=388,801 | size=253x23
+column | 列 | pos=641,801 | size=183x23
+column | 列 | pos=824,801 | size=303x23
+column | 列 | pos=1127,801 | size=203x23
+column | 列 | pos=1330,801 | size=83x23
+column | 列 | pos=1413,801 | size=63x23
+column | 列 | pos=1476,801 | size=103x23
+column | 列 | pos=1579,801 | size=35x23
+column | 列 | pos=1614,801 | size=103x23
+column | 列 | pos=1717,801 | size=103x23
+column | 列 | pos=1820,801 | size=103x23
+column | 列 | pos=1923,801 | size=123x23
+group | グループ | pos=312,777 | size=1734x24
+button | 並べ替えボタン | pos=312,777 | size=33x24
+button | 並べ替えボタン | pos=345,777 | size=43x24
+button | 並べ替えボタン | pos=388,777 | size=253x24
+button | 並べ替えボタン | pos=641,777 | size=183x24
+button | 並べ替えボタン | pos=824,777 | size=303x24
+button | 並べ替えボタン | pos=1127,777 | size=203x24
+button | 並べ替えボタン | pos=1330,777 | size=83x24
+button | 並べ替えボタン | pos=1413,777 | size=63x24
+button | 並べ替えボタン | pos=1476,777 | size=103x24
+button | 並べ替えボタン | pos=1579,777 | size=35x24
+button | 並べ替えボタン | pos=1614,777 | size=103x24
+button | 並べ替えボタン | pos=1717,777 | size=103x24
+button | 並べ替えボタン | pos=1820,777 | size=103x24
+button | 並べ替えボタン | pos=1923,777 | size=123x24
+scroll bar | スクロールバー | pos=311,823 | size=1309x17
+value indicator | 値インジケータ | pos=321,824 | size=970x15
+button | 上向きページボタン | pos=1292,824 | size=326x15
+button | 下向きページボタン | pos=312,824 | size=9x15
+static text | テキスト | pos=331,791 | size=1269x18
+splitter | スプリッタ | pos=1619,742 | size=1x97
+splitter | スプリッタ | pos=1619,742 | size=1x97
+splitter | スプリッタ | pos=1619,742 | size=1x97
+button | Library | pos=1617,739 | size=62x40
+button | Queue | pos=1678,739 | size=62x40
+button | Match | pos=1739,739 | size=62x40
+button | Session | pos=1800,739 | size=62x40
+button | Info | pos=1861,739 | size=62x40
+scroll area | スクロール領域 | pos=1620,777 | size=300x62
+button | Source | pos=1629,776 | size=123x42
+table | ひょう | pos=1619,816 | size=302x24
+column | 列 | pos=1620,817 | size=300x22
+static text | テキスト | pos=1639,791 | size=262x18
+button | ボタン | pos=-1,755 | size=62x36
+button | ライブラリを分割 | pos=-1,805 | size=62x25
+table | ひょう | pos=-1,838 | size=51x574
+row | ひょうの行 | pos=0,839 | size=49x44
+UI element | セル | pos=6,839 | size=37x44
+button | ボタン | pos=5,838 | size=39x46
+row | ひょうの行 | pos=0,883 | size=49x44
+UI element | セル | pos=6,883 | size=37x44
+button | ボタン | pos=5,882 | size=39x46
+row | ひょうの行 | pos=0,927 | size=49x44
+UI element | セル | pos=6,927 | size=37x44
+button | ボタン | pos=5,926 | size=39x46
+row | ひょうの行 | pos=0,971 | size=49x44
+UI element | セル | pos=6,971 | size=37x44
+button | ボタン | pos=5,970 | size=39x46
+row | ひょうの行 | pos=0,1015 | size=49x44
+UI element | セル | pos=6,1015 | size=37x44
+button | ボタン | pos=5,1014 | size=39x46
+row | ひょうの行 | pos=0,1059 | size=49x44
+UI element | セル | pos=6,1059 | size=37x44
+button | ボタン | pos=5,1058 | size=39x46
+row | ひょうの行 | pos=0,1103 | size=49x44
+UI element | セル | pos=6,1103 | size=37x44
+button | ボタン | pos=5,1102 | size=39x46
+row | ひょうの行 | pos=0,1147 | size=49x44
+UI element | セル | pos=6,1147 | size=37x44
+button | ボタン | pos=5,1146 | size=39x46
+row | ひょうの行 | pos=0,1191 | size=49x44
+UI element | セル | pos=6,1191 | size=37x44
+button | ボタン | pos=5,1190 | size=39x46
+row | ひょうの行 | pos=0,1235 | size=49x44
+UI element | セル | pos=6,1235 | size=37x44
+button | ボタン | pos=5,1234 | size=39x46
+row | ひょうの行 | pos=0,1279 | size=49x44
+UI element | セル | pos=6,1279 | size=37x44
+button | ボタン | pos=5,1278 | size=39x46
+row | ひょうの行 | pos=0,1323 | size=49x44
+UI element | セル | pos=6,1323 | size=37x44
+button | ボタン | pos=5,1322 | size=39x46
+row | ひょうの行 | pos=0,1367 | size=49x44
+UI element | セル | pos=6,1367 | size=37x44
+button | Show more | pos=5,1366 | size=39x46
+column | 列 | pos=0,839 | size=49x572
+scroll bar | スクロールバー | pos=48,838 | size=13x2
+value indicator | 値インジケータ | pos=49,841 | size=11x16
+button | 上向きページボタン | pos=49,839 | size=11x18
+button | 下向きページボタン | pos=49,839 | size=11x2
+button | ライブラリを拡大 | pos=9,847 | size=50x30
+button | ボタン | pos=72,847 | size=50x30
+button | Automixパネルを表示l | pos=1798,847 | size=50x30
+button | ライブラリインスペクタを隠す | pos=1861,847 | size=50x30
+toolbar | ツールバー | pos=0,43 | size=1920x38
+group | グループ | pos=76,43 | size=327x38
+button |  | pos=81,47 | size=34x30
+button |  | pos=123,47 | size=34x30
+button |  | pos=176,47 | size=50x30
+button |  | pos=234,47 | size=50x30
+button |  | pos=292,47 | size=50x30
+button |  | pos=350,47 | size=50x30
+group | グループ | pos=908,43 | size=104x38
+image | icon titlebar djay pro | pos=911,51 | size=98x22
+group | グループ | pos=1650,43 | size=266x38
+button |  | pos=1653,47 | size=50x30
+button |  | pos=1711,47 | size=50x30
+button | ボタン | pos=1780,47 | size=123x30
+button | 閉じるボタン | pos=11,54 | size=16x16
+button | フルスクリーンボタン | pos=51,54 | size=16x16
+group | グループ | pos=52,54 | size=14x16
+group | グループ | pos=52,54 | size=14x16
+button | しまうボタン | pos=31,54 | size=16x16
