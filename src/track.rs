@@ -35,16 +35,37 @@ unsafe extern "C" {
     fn CFRelease(cf: *const c_void);
 }
 
-// ---- NSRunningApplication --------------------------------------------------
+// ---- プロセス情報 ----------------------------------------------------------
 
-use objc2::rc::Retained;
-use objc2_app_kit::NSRunningApplication;
-use objc2_foundation::NSString;
-
-fn running_app(bundle_id: &str) -> Option<Retained<NSRunningApplication>> {
-    let bid = NSString::from_str(bundle_id);
-    let apps = NSRunningApplication::runningApplicationsWithBundleIdentifier(&bid);
-    apps.firstObject()
+/// バンドル ID からプロセスの PID と isActive を取得する（osascript 経由）
+fn find_app(bundle_id: &str) -> Option<(i32, bool)> {
+    let script = format!(
+        r#"tell application "System Events"
+    set procs to every process whose bundle identifier is "{}"
+    if procs is {{}} then return ""
+    set p to item 1 of procs
+    return (unix id of p as string) & "\t" & (frontmost of p as string)
+end tell"#,
+        bundle_id
+    );
+    let out = std::process::Command::new("/usr/bin/osascript")
+        .args(["-e", &script])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if s.is_empty() {
+        return None;
+    }
+    let parts: Vec<&str> = s.split('\t').collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    let pid = parts[0].parse::<i32>().ok()?;
+    let active = parts[1].trim() == "true";
+    Some((pid, active))
 }
 
 // ---- AX ヘルパー -----------------------------------------------------------
@@ -282,7 +303,7 @@ unsafe fn get_track_from_swinsian(pid: i32) -> Option<TrackInfo> {
 
 // ---- Music.app -------------------------------------------------------------
 
-fn itunes_metadata_via_applescript() -> Option<(String, String, String, String)> {
+fn itunes_metadata_via_applescript() -> Option<(String, String, String, String, String)> {
     let script = r#"tell application "Music"
     set sel to item 1 of (get selection)
     set t  to name of sel
@@ -290,7 +311,8 @@ fn itunes_metadata_via_applescript() -> Option<(String, String, String, String)>
     set aa to album artist of sel
     set al to album of sel
     set d  to duration of sel
-    return t & "\t" & ar & "\t" & aa & "\t" & al & "\t" & (d as string)
+    set fp to POSIX path of (location of sel as alias)
+    return t & "\t" & ar & "\t" & aa & "\t" & al & "\t" & (d as string) & "\t" & fp
 end tell"#;
     let out = std::process::Command::new("/usr/bin/osascript")
         .args(["-e", script])
@@ -301,7 +323,7 @@ end tell"#;
     }
     let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
     let parts: Vec<&str> = s.split('\t').collect();
-    if parts.len() < 5 {
+    if parts.len() < 6 {
         return None;
     }
     let title = parts[0].to_string();
@@ -310,12 +332,13 @@ end tell"#;
     let album = parts[3].to_string();
     let total_sec = parts[4].parse::<f64>().unwrap_or(0.0) as u64;
     let duration = format!("{}:{:02}", total_sec / 60, total_sec % 60);
+    let file_path = parts[5].to_string();
     let artist = if artist_raw.is_empty() {
         album_artist
     } else {
         artist_raw
     };
-    Some((title, artist, album, duration))
+    Some((title, artist, album, duration, file_path))
 }
 
 unsafe fn get_track_from_itunes(pid: i32) -> Option<TrackInfo> {
@@ -344,6 +367,7 @@ unsafe fn get_track_from_itunes(pid: i32) -> Option<TrackInfo> {
         let artist = meta.as_ref().map(|m| m.1.clone()).unwrap_or_default();
         let album = meta.as_ref().map(|m| m.2.clone()).unwrap_or_default();
         let duration = meta.as_ref().map(|m| m.3.clone()).unwrap_or_default();
+        let file_path = meta.as_ref().map(|m| m.4.clone()).unwrap_or_default();
 
         for &t in &tables {
             unsafe { CFRelease(t as _) };
@@ -359,7 +383,7 @@ unsafe fn get_track_from_itunes(pid: i32) -> Option<TrackInfo> {
             artist,
             album,
             duration,
-            file_path: String::new(),
+            file_path,
             position: pos,
             size: sz,
         });
@@ -370,36 +394,29 @@ unsafe fn get_track_from_itunes(pid: i32) -> Option<TrackInfo> {
 // ---- 公開 API --------------------------------------------------------------
 
 pub fn get_selected_track() -> Result<TrackInfo> {
-    let swinsian = running_app("com.swinsian.Swinsian");
-    let itunes = running_app("com.apple.Music").or_else(|| running_app("com.apple.iTunes"));
+    let swinsian = find_app("com.swinsian.Swinsian");
+    let itunes = find_app("com.apple.Music").or_else(|| find_app("com.apple.iTunes"));
 
     if swinsian.is_none() && itunes.is_none() {
         return Err(anyhow!("Swinsian も Music.app も起動していません"));
     }
 
-    let mut candidates: Vec<(i32, bool)> = Vec::new();
-    unsafe {
-        if let Some(ref s) = swinsian {
-            if s.isActive() {
-                candidates.push((s.processIdentifier(), true));
-            }
-        }
-        if let Some(ref i) = itunes {
-            if i.isActive() {
-                candidates.push((i.processIdentifier(), false));
-            }
-        }
-        if let Some(ref s) = swinsian {
-            if !s.isActive() {
-                candidates.push((s.processIdentifier(), true));
-            }
-        }
-        if let Some(ref i) = itunes {
-            if !i.isActive() {
-                candidates.push((i.processIdentifier(), false));
-            }
-        }
+    // 優先順位: アクティブなものを先頭に、次に Swinsian → iTunes
+    let mut candidates: Vec<(i32, bool)> = Vec::new(); // (pid, is_swinsian)
+    if let Some((pid, true)) = swinsian {
+        candidates.push((pid, true));
+    }
+    if let Some((pid, true)) = itunes {
+        candidates.push((pid, false));
+    }
+    if let Some((pid, false)) = swinsian {
+        candidates.push((pid, true));
+    }
+    if let Some((pid, false)) = itunes {
+        candidates.push((pid, false));
+    }
 
+    unsafe {
         for (pid, is_swinsian) in candidates {
             let result = if is_swinsian {
                 get_track_from_swinsian(pid)

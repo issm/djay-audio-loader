@@ -7,7 +7,7 @@ use core_foundation::{
     base::{CFRetain, CFType, TCFType},
     string::CFString,
 };
-use core_graphics::geometry::{CGPoint, CGSize};
+use core_graphics::geometry::CGPoint;
 use std::ffi::c_void;
 use std::thread::sleep;
 use std::time::Duration;
@@ -86,12 +86,6 @@ unsafe fn ax_value_raw(element: AXUIElementRef, attr: &str) -> Option<*mut c_voi
     }
 }
 
-unsafe fn ax_string(element: AXUIElementRef, attr: &str) -> Option<String> {
-    let raw = unsafe { ax_value_raw(element, attr) }?;
-    let cf: CFString = unsafe { TCFType::wrap_under_create_rule(raw as _) };
-    Some(cf.to_string())
-}
-
 unsafe fn ax_elements(element: AXUIElementRef, attr: &str) -> Option<Vec<AXUIElementRef>> {
     let raw = unsafe { ax_value_raw(element, attr) }?;
     let arr: CFArray<CFType> = unsafe { TCFType::wrap_under_create_rule(raw as _) };
@@ -119,124 +113,108 @@ unsafe fn ax_point(element: AXUIElementRef, attr: &str) -> Option<CGPoint> {
     if ok { Some(point) } else { None }
 }
 
-unsafe fn ax_size(element: AXUIElementRef, attr: &str) -> Option<CGSize> {
-    let raw = unsafe { ax_value_raw(element, attr) }?;
-    let mut size = CGSize::new(0.0, 0.0);
-    let ok = unsafe {
-        AXValueGetValue(
-            raw,
-            AXValueType::CGSize as u32,
-            &mut size as *mut _ as *mut c_void,
-        )
-    };
-    unsafe { CFRelease(raw) };
-    if ok { Some(size) } else { None }
-}
-
-unsafe fn find_all(
-    element: AXUIElementRef,
-    role: &str,
-    depth: usize,
-    result: &mut Vec<AXUIElementRef>,
-) {
-    if unsafe { ax_string(element, "AXRole") }.as_deref() == Some(role) {
-        unsafe { CFRetain(element as _) };
-        result.push(element);
-    }
-    if depth == 0 {
-        return;
-    }
-    if let Some(children) = unsafe { ax_elements(element, "AXChildren") } {
-        for child in children {
-            unsafe { find_all(child, role, depth - 1, result) };
-            unsafe { CFRelease(child as _) };
-        }
-    }
-}
-
 // ---- djay Pro の波形エリア座標取得 -----------------------------------------
 
-pub fn get_waveform_center(deck: u8) -> Result<CGPoint> {
-    use objc2_app_kit::NSRunningApplication;
-    use objc2_foundation::NSString;
+// 検証ログ (.kiro/logs/dump-all-elements.log) より確定した
+// ウィンドウ左上からの相対オフセット（波形エリア中央）
+// ウィンドウ位置 (-18, 43) 時:
+//   波形 デッキ1: pos=613,194 size=694x119 → 中央=(960,253)
+//   波形 デッキ2: pos=613,314 size=694x119 → 中央=(960,373)
+// ウィンドウ相対: x=960-(-18)=978, y1=253-43=210, y2=373-43=330
+const WAVEFORM_OFFSET: [(f64, f64); 2] = [
+    (978.0, 210.0), // デッキ1
+    (978.0, 330.0), // デッキ2
+];
 
-    let pid = {
-        let bid = NSString::from_str("com.algoriddim.djay-pro-mac");
-        let apps = NSRunningApplication::runningApplicationsWithBundleIdentifier(&bid);
-        match apps.firstObject() {
-            Some(app) => app.processIdentifier(),
-            None => return Err(anyhow!("djay Pro が起動していません")),
-        }
+pub fn get_waveform_center(deck: u8) -> Result<CGPoint> {
+    let deck_idx = match deck {
+        1 => 0,
+        2 => 1,
+        _ => return Err(anyhow!("不正なデッキ番号: {}", deck)),
     };
 
-    unsafe {
+    let script = r#"tell application "System Events"
+    set procs to every process whose bundle identifier is "com.algoriddim.djay-iphone-free"
+    if procs is {} then return ""
+    return unix id of item 1 of procs as string
+end tell"#;
+    let out = std::process::Command::new("/usr/bin/osascript")
+        .args(["-e", script])
+        .output()
+        .map_err(|e| anyhow!("osascript 実行失敗: {}", e))?;
+    let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if s.is_empty() {
+        return Err(anyhow!("djay Pro が起動していません"));
+    }
+    let pid = s
+        .parse::<i32>()
+        .map_err(|_| anyhow!("PID パース失敗: {}", s))?;
+
+    let win_pos = unsafe {
         let ax_app = AXUIElementCreateApplication(pid);
         let windows = ax_elements(ax_app, "AXWindows")
             .ok_or_else(|| anyhow!("djay Pro のウィンドウ取得失敗"))?;
         let window = *windows
             .first()
             .ok_or_else(|| anyhow!("djay Pro のウィンドウなし"))?;
-
-        let deck_label = format!("デッキ {}", deck);
-        let mut buttons: Vec<AXUIElementRef> = Vec::new();
-        find_all(window, "AXButton", 6, &mut buttons);
-
-        for &btn in &buttons {
-            let desc = ax_string(btn, "AXDescription").unwrap_or_default();
-            if desc.contains("波形") && desc.contains(&deck_label) {
-                if let (Some(pos), Some(sz)) = (ax_point(btn, "AXPosition"), ax_size(btn, "AXSize"))
-                {
-                    let cx = pos.x + sz.width / 2.0;
-                    let cy = pos.y + sz.height / 2.0;
-                    for &b in &buttons {
-                        CFRelease(b as _);
-                    }
-                    for &w in &windows {
-                        CFRelease(w as _);
-                    }
-                    CFRelease(ax_app as _);
-                    return Ok(CGPoint::new(cx, cy));
-                }
-            }
-        }
-
-        for &b in &buttons {
-            CFRelease(b as _);
-        }
+        let pos = ax_point(window, "AXPosition")
+            .ok_or_else(|| anyhow!("djay Pro のウィンドウ座標取得失敗"))?;
         for &w in &windows {
             CFRelease(w as _);
         }
         CFRelease(ax_app as _);
-    }
-
-    // フォールバック: 検証ログの固定座標
-    let fallback = match deck {
-        1 => CGPoint::new(960.0, 253.0),
-        2 => CGPoint::new(960.0, 373.0),
-        _ => return Err(anyhow!("不正なデッキ番号: {}", deck)),
+        pos
     };
-    eprintln!(
-        "警告: 波形エリアが見つからなかったためフォールバック座標を使用: ({}, {})",
-        fallback.x, fallback.y
-    );
-    Ok(fallback)
+
+    let (ox, oy) = WAVEFORM_OFFSET[deck_idx];
+    Ok(CGPoint::new(win_pos.x + ox, win_pos.y + oy))
 }
 
 // ---- CGEvent ドラッグ&ドロップ ---------------------------------------------
 
-fn simulate_drag(src: CGPoint, dst: CGPoint) {
+fn activate_djay() {
+    std::process::Command::new("/usr/bin/osascript")
+        .args(["-e", r#"tell application "System Events" to set frontmost of (first process whose bundle identifier is "com.algoriddim.djay-iphone-free") to true"#])
+        .output()
+        .ok();
+}
+
+fn activate_source(source: &str) {
+    let bundle_id = match source {
+        "Swinsian" => "com.swinsian.Swinsian",
+        "iTunes" => "com.apple.Music",
+        _ => return,
+    };
+    let script = format!(
+        r#"tell application "System Events" to set frontmost of (first process whose bundle identifier is "{}") to true"#,
+        bundle_id
+    );
+    std::process::Command::new("/usr/bin/osascript")
+        .args(["-e", &script])
+        .output()
+        .ok();
+}
+
+fn simulate_drag(src: CGPoint, dst: CGPoint, source: &str, drop_delay_ms: u64) {
     unsafe {
-        // MouseDown
+        // ドラッグ元アプリをアクティブにしてから MouseDown
+        activate_source(source);
+        sleep(Duration::from_millis(200));
+
         let down = CGEventCreateMouseEvent(
             std::ptr::null_mut(),
             CGEventType::LeftMouseDown as u32,
             src,
-            0, // kCGMouseButtonLeft
+            0,
         );
         CGEventSetIntegerValueField(down, K_CG_MOUSE_EVENT_CLICK_STATE, 1);
         CGEventPost(K_CG_HID_EVENT_TAP, down);
         CFRelease(down as _);
         sleep(Duration::from_millis(50));
+
+        // ドラッグ開始後に djay Pro をアクティブにする
+        activate_djay();
+        sleep(Duration::from_millis(200));
 
         // Drag（中間点を数ステップ挟む）
         let steps = 20usize;
@@ -254,6 +232,9 @@ fn simulate_drag(src: CGPoint, dst: CGPoint) {
             sleep(Duration::from_millis(10));
         }
 
+        // ドロップ先でホバー待機（djay Pro がドラッグオブジェクトを認識するまで）
+        sleep(Duration::from_millis(drop_delay_ms));
+
         // MouseUp
         let up = CGEventCreateMouseEvent(
             std::ptr::null_mut(),
@@ -268,16 +249,18 @@ fn simulate_drag(src: CGPoint, dst: CGPoint) {
 
 // ---- 公開 API --------------------------------------------------------------
 
-pub fn drag_to_djay(track: &TrackInfo, deck: u8) -> Result<()> {
+pub fn drag_to_djay(track: &TrackInfo, deck: u8, drop_delay_ms: u64) -> Result<()> {
+    let dst = get_waveform_center(deck)?;
+    // 行の AXSize.width はスクロール領域込みで非常に大きくなる場合があるため、
+    // x は position.x + 小オフセット（タイトル列付近）、y は行の垂直中央を使う
     let src = CGPoint::new(
-        track.position.x + track.size.width / 2.0,
+        track.position.x + 100.0,
         track.position.y + track.size.height / 2.0,
     );
-    let dst = get_waveform_center(deck)?;
     eprintln!(
-        "ドラッグ: ({:.0}, {:.0}) → ({:.0}, {:.0})",
+        "ドラッグ: ({:.0},{:.0}) → ({:.0},{:.0})",
         src.x, src.y, dst.x, dst.y
     );
-    simulate_drag(src, dst);
+    simulate_drag(src, dst, &track.source, drop_delay_ms);
     Ok(())
 }

@@ -9,6 +9,10 @@ pub struct Cli {
     /// ロード先のデッキ番号 (1 or 2)
     #[arg(short, long, value_name = "DECK_NO")]
     pub deck: u8,
+
+    /// ドロップ前のホバー待機時間 [ms]
+    #[arg(long, value_name = "MS", default_value_t = 250)]
+    pub drop_delay: u64,
 }
 
 pub fn parse() -> Cli {

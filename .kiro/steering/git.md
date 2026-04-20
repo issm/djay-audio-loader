@@ -8,6 +8,10 @@
 <type>[optional scope]: <description>
 ```
 
+## コミットメッセージの言語
+
+説明文（description）は日本語で記述すること。
+
 ### 主な type
 
 - `feat`: 新機能
