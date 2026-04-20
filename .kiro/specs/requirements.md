@@ -2,7 +2,7 @@
 
 ## 概要
 
-Swinsian で選択中の楽曲を djay Pro の特定デッキにロードするツール群。
+Swinsian または Music.app で選択中の楽曲を djay Pro の特定デッキにロードするツール群。
 
 ---
 
@@ -23,13 +23,16 @@ drag-into-djay -f <audio_file> -d <deck_no>
 
 #### 動作
 
-1. Accessibility API でドラッグ元アプリ（現在は Swinsian、将来的に Music.app 等にも対応予定）の選択中アイテムの UI 上の座標を動的取得
+1. Accessibility API でドラッグ元アプリの選択中アイテムの UI 上の座標を動的取得
+   - ドラッグ元アプリの選択は以下の優先順位で決定する:
+     1. Swinsian・Music.app のうちアクティブ（フォアグラウンド）なものを優先
+     2. 両方非アクティブの場合: Swinsian → Music.app の順
 2. djay Pro の指定デッキの波形エリア座標を Accessibility API で動的取得
-3. Swinsian の選択アイテムから djay Pro の波形エリアへ CGEvent でドラッグ&ドロップを実行
+3. 選択アイテムから djay Pro の波形エリアへ CGEvent でドラッグ&ドロップを実行
 
 #### 前提条件
 
-- Swinsian・djay Pro の両方が起動済みかつフォアグラウンド表示されていること（将来的に Music.app 等にも対応予定）
+- Swinsian または Music.app、および djay Pro が起動済みかつフォアグラウンド表示されていること
 - Accessibility の権限が付与されていること
 
 ---
