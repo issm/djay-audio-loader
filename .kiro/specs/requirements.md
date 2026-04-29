@@ -41,7 +41,7 @@ drag-into-djay -d <deck_no>
 
 - `NSWorkspace` で djay Pro の起動を監視し、起動したらホットキー監視を有効化
 - djay Pro が終了したらホットキー監視を無効化
-- `launchd` エージェントとしてログイン時に常駐起動
+- TODO: オンオフを容易にできるようにする
 
 #### ホットキー
 
