@@ -1,11 +1,12 @@
 mod cli;
 mod drag;
+mod logger;
 mod track;
 
 use anyhow::Result;
 
 fn main() -> Result<()> {
-    env_logger::init();
+    logger::init();
 
     let args = cli::parse();
 

@@ -7,6 +7,10 @@ mod hotkey;
 use clap::Parser;
 use config::Config;
 
+// logger は src/ 直下にあるため、helper バイナリからは #[path] で参照する
+#[path = "../logger.rs"]
+mod logger;
+
 #[derive(Parser, Debug)]
 #[command(
     name = "djay-audio-loader-helper",
@@ -19,7 +23,7 @@ struct Cli {
 }
 
 fn main() -> anyhow::Result<()> {
-    env_logger::init();
+    logger::init();
 
     let args = Cli::parse();
 
