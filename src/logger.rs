@@ -15,7 +15,7 @@ pub fn init() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .format(|buf, record| {
             let ts = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f%:z");
-            writeln!(buf, "{} [{:5}] {}", ts, record.level(), record.args())
+            writeln!(buf, "{} [{}] {}", ts, record.level(), record.args())
         })
         .init();
 }
