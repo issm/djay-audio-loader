@@ -3,3 +3,6 @@
 # Added by cargo
 
 /target
+
+# MCP settings (contains secrets)
+.kiro/settings/mcp.json
