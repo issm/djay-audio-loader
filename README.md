@@ -97,6 +97,3 @@ djay-audio-loader-helper [OPTIONS]
 - `drag-into-djay` の実行中に再度ホットキーを押した場合はスキップ（多重起動防止）
 - `djay-audio-loader-helper` と `drag-into-djay` は同じディレクトリに配置すること
 
-## 既知の問題
-
-Music.app からのドラッグ時、特定の曲で djay Pro がドロップを受け付けない現象がある。同じ曲でも Swinsian からは正常にロードできる。原因は調査中。
