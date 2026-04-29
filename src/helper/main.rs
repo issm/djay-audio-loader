@@ -19,6 +19,8 @@ struct Cli {
 }
 
 fn main() -> anyhow::Result<()> {
+    env_logger::init();
+
     let args = Cli::parse();
 
     let mut config = Config::load();
@@ -26,11 +28,13 @@ fn main() -> anyhow::Result<()> {
         config.no_activate = true;
     }
 
-    eprintln!(
-        "[helper] 起動: deck1={:?}, deck2={:?}, no_activate={}",
-        config.hotkey_deck1, config.hotkey_deck2, config.no_activate
+    log::info!(
+        "起動: deck1={:?}, deck2={:?}, no_activate={}",
+        config.hotkey_deck1,
+        config.hotkey_deck2,
+        config.no_activate
     );
-    eprintln!("[helper] ホットキー監視を開始します。Ctrl+C で終了。");
+    log::info!("ホットキー監視を開始します。Ctrl+C で終了。");
 
     hotkey::run_event_loop(&config)?;
 

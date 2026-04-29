@@ -262,9 +262,12 @@ pub fn drag_to_djay(
         track.position.x + 100.0,
         track.position.y + track.size.height / 2.0,
     );
-    eprintln!(
+    log::info!(
         "ドラッグ: ({:.0},{:.0}) → ({:.0},{:.0})",
-        src.x, src.y, dst.x, dst.y
+        src.x,
+        src.y,
+        dst.x,
+        dst.y
     );
     simulate_drag(src, dst, &track.source, drop_delay_ms, no_activate);
     Ok(())

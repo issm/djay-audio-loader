@@ -104,7 +104,7 @@ unsafe extern "C" fn event_tap_callback(
     // kCGEventTapDisabledByTimeout = 0xFFFFFFFE, kCGEventTapDisabledByUserInput = 0xFFFFFFFF
     if event_type == 0xFFFFFFFE || event_type == 0xFFFFFFFF {
         let ctx = unsafe { &*(user_info as *const TapContext) };
-        eprintln!("[helper] EventTap が無効化されました。再有効化します。");
+        log::warn!("EventTap が無効化されました。再有効化します。");
         unsafe { CGEventTapEnable(ctx.tap, true) };
         return event;
     }
@@ -123,17 +123,14 @@ unsafe extern "C" fn event_tap_callback(
 
     for hk in &ctx.hotkeys {
         if hk.keycode == keycode && hk.modifiers.as_cg_flags() == flags_masked {
-            eprintln!(
-                "[helper] ホットキー検出: keycode={} → デッキ{}",
-                keycode, hk.deck
-            );
+            log::info!("ホットキー検出: keycode={} → デッキ{}", keycode, hk.deck);
 
             // 多重起動チェック
             let running = ctx.running.clone();
             {
                 let mut guard = running.lock().unwrap();
                 if *guard {
-                    eprintln!("[helper] drag-into-djay 実行中のためスキップ");
+                    log::info!("drag-into-djay 実行中のためスキップ");
                     return std::ptr::null_mut();
                 }
                 *guard = true;
@@ -187,9 +184,9 @@ fn invoke_drag(binary: &str, deck: u8, drop_delay: u64, no_activate: bool) {
     }
     let status = std::process::Command::new(binary).args(&args).status();
     match status {
-        Ok(s) if s.success() => eprintln!("[helper] drag-into-djay 完了"),
-        Ok(s) => eprintln!("[helper] drag-into-djay 終了コード: {}", s),
-        Err(e) => eprintln!("[helper] drag-into-djay 起動失敗: {}", e),
+        Ok(s) if s.success() => log::info!("drag-into-djay 完了"),
+        Ok(s) => log::warn!("drag-into-djay 終了コード: {}", s),
+        Err(e) => log::error!("drag-into-djay 起動失敗: {}", e),
     }
 }
 
@@ -197,7 +194,7 @@ fn invoke_drag(binary: &str, deck: u8, drop_delay: u64, no_activate: bool) {
 
 pub fn run_event_loop(config: &Config) -> Result<()> {
     let drag_binary = resolve_drag_binary(&config.drag_binary);
-    eprintln!("[helper] drag-into-djay パス: {}", drag_binary);
+    log::info!("drag-into-djay パス: {}", drag_binary);
 
     // tap は後で ctx に入れるため、一旦ダミーで Box を作り raw ポインタを確保してから
     // tap 作成後に書き込む
@@ -239,7 +236,7 @@ pub fn run_event_loop(config: &Config) -> Result<()> {
     unsafe {
         let rl = CFRunLoopGetCurrent();
         CFRunLoopAddSource(rl, source, kCFRunLoopCommonModes);
-        eprintln!("[helper] RunLoop 開始");
+        log::info!("RunLoop 開始");
         CFRunLoopRun();
     }
 
