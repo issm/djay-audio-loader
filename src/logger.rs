@@ -9,21 +9,15 @@
 //
 // タイムスタンプはシステムのローカルタイム（日本時間）で出力される
 //
-// warn / error レベルのメッセージは macOS 通知としても表示される
+// error レベルのメッセージは macOS 通知としても表示される
 
 use std::io::Write;
 
-/// warn / error レベルのメッセージを macOS 通知で表示する（同期）
-fn notify(level: log::Level, message: &str) {
-    let title = match level {
-        log::Level::Error => "djay-audio-loader: エラー",
-        log::Level::Warn => "djay-audio-loader: 警告",
-        _ => return,
-    };
+/// error レベルのメッセージを macOS 通知で表示する（同期）
+fn notify(message: &str) {
     let script = format!(
-        "display notification \"{}\" with title \"{}\"",
+        "display notification \"{}\" with title \"djay-audio-loader: エラー\"",
         message.replace('"', "\\\""),
-        title.replace('"', "\\\""),
     );
     let _ = std::process::Command::new("osascript")
         .args(["-e", &script])
@@ -35,8 +29,8 @@ pub fn init() {
         .format(|buf, record| {
             let ts = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f%:z");
 
-            if matches!(record.level(), log::Level::Warn | log::Level::Error) {
-                notify(record.level(), &record.args().to_string());
+            if matches!(record.level(), log::Level::Error) {
+                notify(&record.args().to_string());
             }
 
             writeln!(buf, "{} [{}] {}", ts, record.level(), record.args())
