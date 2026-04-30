@@ -13,26 +13,21 @@
 
 use std::io::Write;
 
-/// warn / error レベルのメッセージを macOS 通知で表示する（非同期）
+/// warn / error レベルのメッセージを macOS 通知で表示する（同期）
 fn notify(level: log::Level, message: &str) {
     let title = match level {
         log::Level::Error => "djay-audio-loader: エラー",
         log::Level::Warn => "djay-audio-loader: 警告",
         _ => return,
     };
-    let title = title.to_string();
-    let message = message.to_string();
-
-    std::thread::spawn(move || {
-        let script = format!(
-            "display notification \"{}\" with title \"{}\"",
-            message.replace('"', "\\\""),
-            title.replace('"', "\\\""),
-        );
-        let _ = std::process::Command::new("osascript")
-            .args(["-e", &script])
-            .output();
-    });
+    let script = format!(
+        "display notification \"{}\" with title \"{}\"",
+        message.replace('"', "\\\""),
+        title.replace('"', "\\\""),
+    );
+    let _ = std::process::Command::new("osascript")
+        .args(["-e", &script])
+        .output();
 }
 
 pub fn init() {
