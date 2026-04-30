@@ -5,9 +5,7 @@ mod track;
 
 use anyhow::Result;
 
-fn main() -> Result<()> {
-    logger::init();
-
+fn run() -> Result<()> {
     let args = cli::parse();
 
     if args.deck < 1 || args.deck > 2 {
@@ -28,4 +26,13 @@ fn main() -> Result<()> {
     log::info!("ドラッグ完了: デッキ {} にロードしました", args.deck);
 
     Ok(())
+}
+
+fn main() {
+    logger::init();
+
+    if let Err(e) = run() {
+        log::error!("{}", e);
+        std::process::exit(1);
+    }
 }
