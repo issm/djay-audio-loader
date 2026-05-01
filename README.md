@@ -2,6 +2,49 @@
 
 Swinsian または Music.app で選択中の楽曲を djay Pro の指定デッキにロードするツール群。
 
+## アーキテクチャ
+
+```mermaid
+flowchart TD
+    subgraph helper["djay-audio-loader-helper"]
+        config["config.rs\n(設定読込)"]
+        hotkey["hotkey.rs\n(CGEventTap 監視)"]
+        config --> hotkey
+    end
+
+    hotkey -->|サブプロセス起動| main
+
+    subgraph did["drag-into-djay"]
+        main["main.rs"]
+
+        subgraph track["track.rs (選択トラック取得)"]
+            direction TB
+            ax_swinsian["AX API\n(Swinsian)"]
+            osascript["osascript\n(Music.app)"]
+        end
+
+        subgraph drag["drag.rs (ドラッグ実行)"]
+            direction TB
+            ax_djay["AX API\n(djay Pro 座標)"]
+            cgevent["CGEvent\n(マウス操作)"]
+        end
+
+        main -->|"優先順位①アクティブ\n②Swinsian→Music"| track
+        main --> drag
+    end
+
+    track -.->|選択行の座標・メタ情報| drag
+
+    Swinsian(["Swinsian"])
+    MusicApp(["Music.app"])
+    djayPro(["djay Pro"])
+
+    ax_swinsian <-->|Accessibility API| Swinsian
+    osascript <-->|AppleScript| MusicApp
+    ax_djay <-->|Accessibility API| djayPro
+    cgevent -->|ドラッグ&ドロップ| djayPro
+```
+
 ## ツール構成
 
 | バイナリ | 役割 |
@@ -96,4 +139,3 @@ djay-audio-loader-helper [OPTIONS]
 - ホットキーイベントは消費され、他のアプリには伝達されない
 - `drag-into-djay` の実行中に再度ホットキーを押した場合はスキップ（多重起動防止）
 - `djay-audio-loader-helper` と `drag-into-djay` は同じディレクトリに配置すること
-
