@@ -22,6 +22,17 @@ fn run() -> Result<()> {
         track.file_path
     );
 
+    // ファイルパスが取得できている場合、実際に存在するか確認する
+    if !track.file_path.is_empty() {
+        if std::path::Path::new(&track.file_path).exists() {
+            log::info!("ファイルパスチェック: OK ({})", track.file_path);
+        } else {
+            anyhow::bail!("ファイルが見つかりません: {}", track.file_path);
+        }
+    } else {
+        log::info!("ファイルパスチェック: スキップ（パス未取得）");
+    }
+
     drag::drag_to_djay(&track, args.deck, args.drop_delay, args.no_activate)?;
     log::info!("ドラッグ完了: デッキ {} にロードしました", args.deck);
 
