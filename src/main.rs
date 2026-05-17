@@ -1,6 +1,7 @@
 mod cli;
 mod drag;
 mod logger;
+mod notify;
 mod track;
 
 use anyhow::Result;
@@ -42,6 +43,11 @@ fn run() -> Result<()> {
     drag::drag_to_djay(&track, args.deck, args.drop_delay, args.no_activate)?;
     log::info!("ドラッグ完了: デッキ {} にロードしました", args.deck);
 
+    // 成功通知
+    if let Err(e) = notify::notify_success(&track, args.deck) {
+        log::warn!("通知の送信に失敗しました: {}", e);
+    }
+
     Ok(())
 }
 
@@ -50,6 +56,12 @@ fn main() {
 
     if let Err(e) = run() {
         log::error!("{}", e);
+
+        // エラー通知
+        if let Err(notify_err) = notify::notify_error(&e.to_string()) {
+            log::warn!("エラー通知の送信に失敗しました: {}", notify_err);
+        }
+
         std::process::exit(1);
     }
 }
