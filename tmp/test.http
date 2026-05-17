@@ -1,0 +1,15 @@
+@url = https://api.githubcopilot.com/mcp/
+@token = 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
+
+###
+POST {{url}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list",
+    "params": {}
+}

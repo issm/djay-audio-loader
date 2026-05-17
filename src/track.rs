@@ -229,6 +229,7 @@ pub struct TrackInfo {
     pub artist: String,
     pub album: String,
     pub duration: String,
+    pub comment: String,
     pub file_path: String,
     pub position: CGPoint,
     pub size: CGSize,
@@ -264,6 +265,11 @@ unsafe fn get_track_from_swinsian(pid: i32) -> Option<TrackInfo> {
         } else {
             String::new()
         };
+        let comment = if cells.len() > 7 {
+            unsafe { cell_value(cells[7]) }
+        } else {
+            String::new()
+        };
         let album = if cells.len() > 9 {
             unsafe { cell_value(cells[9]) }
         } else {
@@ -293,6 +299,7 @@ unsafe fn get_track_from_swinsian(pid: i32) -> Option<TrackInfo> {
             artist,
             album,
             duration,
+            comment,
             file_path,
             position: pos,
             size: sz,
@@ -303,7 +310,7 @@ unsafe fn get_track_from_swinsian(pid: i32) -> Option<TrackInfo> {
 
 // ---- Music.app -------------------------------------------------------------
 
-fn itunes_metadata_via_applescript() -> Option<(String, String, String, String, String)> {
+fn itunes_metadata_via_applescript() -> Option<(String, String, String, String, String, String)> {
     let script = r#"tell application "Music"
     set sel to item 1 of (get selection)
     set t  to name of sel
@@ -311,8 +318,9 @@ fn itunes_metadata_via_applescript() -> Option<(String, String, String, String, 
     set aa to album artist of sel
     set al to album of sel
     set d  to duration of sel
+    set c  to comment of sel
     set fp to POSIX path of (location of sel as alias)
-    return t & "\t" & ar & "\t" & aa & "\t" & al & "\t" & (d as string) & "\t" & fp
+    return t & "\t" & ar & "\t" & aa & "\t" & al & "\t" & (d as string) & "\t" & c & "\t" & fp
 end tell"#;
     let out = std::process::Command::new("/usr/bin/osascript")
         .args(["-e", script])
@@ -323,7 +331,7 @@ end tell"#;
     }
     let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
     let parts: Vec<&str> = s.split('\t').collect();
-    if parts.len() < 6 {
+    if parts.len() < 7 {
         return None;
     }
     let title = parts[0].to_string();
@@ -332,13 +340,14 @@ end tell"#;
     let album = parts[3].to_string();
     let total_sec = parts[4].parse::<f64>().unwrap_or(0.0) as u64;
     let duration = format!("{}:{:02}", total_sec / 60, total_sec % 60);
-    let file_path = parts[5].to_string();
+    let comment = parts[5].to_string();
+    let file_path = parts[6].to_string();
     let artist = if artist_raw.is_empty() {
         album_artist
     } else {
         artist_raw
     };
-    Some((title, artist, album, duration, file_path))
+    Some((title, artist, album, duration, comment, file_path))
 }
 
 unsafe fn get_track_from_itunes(pid: i32) -> Option<TrackInfo> {
@@ -367,7 +376,8 @@ unsafe fn get_track_from_itunes(pid: i32) -> Option<TrackInfo> {
         let artist = meta.as_ref().map(|m| m.1.clone()).unwrap_or_default();
         let album = meta.as_ref().map(|m| m.2.clone()).unwrap_or_default();
         let duration = meta.as_ref().map(|m| m.3.clone()).unwrap_or_default();
-        let file_path = meta.as_ref().map(|m| m.4.clone()).unwrap_or_default();
+        let comment = meta.as_ref().map(|m| m.4.clone()).unwrap_or_default();
+        let file_path = meta.as_ref().map(|m| m.5.clone()).unwrap_or_default();
 
         for &t in &tables {
             unsafe { CFRelease(t as _) };
@@ -383,6 +393,7 @@ unsafe fn get_track_from_itunes(pid: i32) -> Option<TrackInfo> {
             artist,
             album,
             duration,
+            comment,
             file_path,
             position: pos,
             size: sz,

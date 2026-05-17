@@ -15,11 +15,17 @@ fn run() -> Result<()> {
     log::info!("CLI パース完了: deck={}", args.deck);
 
     let track = track::get_selected_track()?;
+    let comment_info = if track.comment.is_empty() {
+        String::new()
+    } else {
+        format!(" (コメント: {})", track.comment)
+    };
     log::info!(
-        "トラック取得完了: [{}] {} / {}",
+        "トラック取得完了: [{}] {} / {}{}",
         track.source,
         track.title,
-        track.file_path
+        track.file_path,
+        comment_info
     );
 
     // ファイルパスが取得できている場合、実際に存在するか確認する
