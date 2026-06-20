@@ -237,18 +237,99 @@ pub struct TrackInfo {
 
 // ---- Swinsian --------------------------------------------------------------
 
+unsafe fn dump_ax_tree(element: AXUIElementRef, depth: usize, max_depth: usize) {
+    if depth > max_depth {
+        return;
+    }
+    let indent = "  ".repeat(depth);
+    let role = unsafe { ax_string(element, "AXRole") }.unwrap_or_else(|| "?".into());
+    let subrole = unsafe { ax_string(element, "AXSubrole") }.unwrap_or_else(|| "".into());
+    let title = unsafe { ax_string(element, "AXTitle") }.unwrap_or_else(|| "".into());
+    let desc = unsafe { ax_string(element, "AXDescription") }.unwrap_or_else(|| "".into());
+
+    let subrole_str = if subrole.is_empty() {
+        String::new()
+    } else {
+        format!(" subrole={}", subrole)
+    };
+    let title_str = if title.is_empty() {
+        String::new()
+    } else {
+        format!(" title=\"{}\"", title)
+    };
+    let desc_str = if desc.is_empty() {
+        String::new()
+    } else {
+        format!(" desc=\"{}\"", desc)
+    };
+
+    log::debug!(
+        "{}role={}{}{}{}",
+        indent,
+        role,
+        subrole_str,
+        title_str,
+        desc_str
+    );
+
+    if let Some(children) = unsafe { ax_elements(element, "AXChildren") } {
+        for child in &children {
+            unsafe { dump_ax_tree(*child, depth + 1, max_depth) };
+        }
+        for &c in &children {
+            unsafe { CFRelease(c as _) };
+        }
+    }
+}
+
 unsafe fn get_track_from_swinsian(pid: i32) -> Option<TrackInfo> {
     let ax_app = unsafe { AXUIElementCreateApplication(pid) };
     let windows = unsafe { ax_elements(ax_app, "AXWindows") }?;
-    let window = *windows.first()?;
+
+    log::debug!("=== Swinsian AXWindows 数: {} ===", windows.len());
+    for (i, &win) in windows.iter().enumerate() {
+        let role = unsafe { ax_string(win, "AXRole") }.unwrap_or_else(|| "?".into());
+        let subrole = unsafe { ax_string(win, "AXSubrole") }.unwrap_or_else(|| "".into());
+        let title = unsafe { ax_string(win, "AXTitle") }.unwrap_or_else(|| "".into());
+        log::debug!(
+            "  Window[{}]: role={} subrole={} title=\"{}\"",
+            i,
+            role,
+            subrole,
+            title
+        );
+    }
+
+    // AXHelpTag（ツールチップ）等を除外し、AXWindow のみを対象とする (#13)
+    let window = *windows
+        .iter()
+        .find(|&&w| unsafe { ax_string(w, "AXRole") }.as_deref() == Some("AXWindow"))?;
 
     let mut tables: Vec<AXUIElementRef> = Vec::new();
     unsafe { find_all(window, "AXTable", 8, &mut tables) };
 
-    for &table in &tables {
+    log::debug!("=== AXTable 数: {} ===", tables.len());
+
+    if tables.is_empty() {
+        log::debug!("テーブルが見つからないため、ウィンドウのツリーをダンプします (depth=4):");
+        unsafe { dump_ax_tree(window, 0, 4) };
+    }
+
+    for (ti, &table) in tables.iter().enumerate() {
         let selected = match unsafe { ax_elements(table, "AXSelectedRows") } {
-            Some(r) if !r.is_empty() => r,
-            _ => continue,
+            Some(r) if !r.is_empty() => {
+                log::debug!("  Table[{}]: AXSelectedRows={} 行", ti, r.len());
+                r
+            }
+            Some(r) => {
+                log::debug!("  Table[{}]: AXSelectedRows=0 行 (空)", ti);
+                drop(r);
+                continue;
+            }
+            _ => {
+                log::debug!("  Table[{}]: AXSelectedRows 取得失敗", ti);
+                continue;
+            }
         };
         let row = selected[0];
         let pos = unsafe { ax_point(row, "AXPosition") }?;
@@ -428,11 +509,11 @@ pub fn get_selected_track() -> Result<TrackInfo> {
     }
 
     unsafe {
-        for (pid, is_swinsian) in candidates {
-            let result = if is_swinsian {
-                get_track_from_swinsian(pid)
+        for (pid, is_swinsian) in &candidates {
+            let result = if *is_swinsian {
+                get_track_from_swinsian(*pid)
             } else {
-                get_track_from_itunes(pid)
+                get_track_from_itunes(*pid)
             };
             if let Some(track) = result {
                 return Ok(track);
@@ -440,5 +521,16 @@ pub fn get_selected_track() -> Result<TrackInfo> {
         }
     }
 
+    log::debug!(
+        "全候補でトラック取得失敗: {:?}",
+        candidates
+            .iter()
+            .map(|(pid, is_sw)| format!(
+                "pid={} ({})",
+                pid,
+                if *is_sw { "Swinsian" } else { "iTunes" }
+            ))
+            .collect::<Vec<_>>()
+    );
     Err(anyhow!("選択中トラックが取得できませんでした"))
 }
