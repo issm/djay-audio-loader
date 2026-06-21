@@ -6,3 +6,6 @@
 
 # MCP settings (contains secrets)
 .kiro/settings/mcp.json
+
+# Temporary files
+tmp/
