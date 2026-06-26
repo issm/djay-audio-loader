@@ -259,15 +259,17 @@ pub fn drag_to_djay(
 ) -> Result<()> {
     let dst = get_waveform_center(deck)?;
     let src = CGPoint::new(
-        track.position.x + 100.0,
+        track.table_position.x + 200.0,
         track.position.y + track.size.height / 2.0,
     );
     log::info!(
-        "ドラッグ: ({:.0},{:.0}) → ({:.0},{:.0})",
+        "ドラッグ: ({:.0},{:.0}) → ({:.0},{:.0})  [scroll_area: x={:.0} w={:.0}]",
         src.x,
         src.y,
         dst.x,
-        dst.y
+        dst.y,
+        track.table_position.x,
+        track.table_size.width,
     );
     simulate_drag(src, dst, &track.source, drop_delay_ms, no_activate);
     Ok(())

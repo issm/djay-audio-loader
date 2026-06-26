@@ -233,6 +233,10 @@ pub struct TrackInfo {
     pub file_path: String,
     pub position: CGPoint,
     pub size: CGSize,
+    /// テーブル（スクロールエリア）の可視領域の位置
+    pub table_position: CGPoint,
+    /// テーブル（スクロールエリア）の可視領域のサイズ
+    pub table_size: CGSize,
 }
 
 // ---- Swinsian --------------------------------------------------------------
@@ -308,7 +312,12 @@ unsafe fn get_track_from_swinsian(pid: i32) -> Option<TrackInfo> {
     let mut tables: Vec<AXUIElementRef> = Vec::new();
     unsafe { find_all(window, "AXTable", 8, &mut tables) };
 
+    // テーブルを包含する AXScrollArea を探す（可視領域の矩形として使う）
+    let mut scroll_areas: Vec<AXUIElementRef> = Vec::new();
+    unsafe { find_all(window, "AXScrollArea", 8, &mut scroll_areas) };
+
     log::debug!("=== AXTable 数: {} ===", tables.len());
+    log::debug!("=== AXScrollArea 数: {} ===", scroll_areas.len());
 
     if tables.is_empty() {
         log::debug!("テーブルが見つからないため、ウィンドウのツリーをダンプします (depth=4):");
@@ -334,6 +343,40 @@ unsafe fn get_track_from_swinsian(pid: i32) -> Option<TrackInfo> {
         let row = selected[0];
         let pos = unsafe { ax_point(row, "AXPosition") }?;
         let sz = unsafe { ax_size(row, "AXSize") }?;
+
+        // テーブルを含む AXScrollArea の可視領域を取得
+        let (tbl_pos, tbl_sz) = {
+            let mut found = None;
+            for &sa in &scroll_areas {
+                // AXScrollArea の子に AXTable があるかチェック
+                if let Some(children) = unsafe { ax_elements(sa, "AXChildren") } {
+                    let has_table = children.iter().any(|&child| {
+                        unsafe { ax_string(child, "AXRole") }.as_deref() == Some("AXTable")
+                    });
+                    for &c in &children {
+                        unsafe { CFRelease(c as _) };
+                    }
+                    if has_table {
+                        let p = unsafe { ax_point(sa, "AXPosition") };
+                        let s = unsafe { ax_size(sa, "AXSize") };
+                        if let (Some(p), Some(s)) = (p, s) {
+                            found = Some((p, s));
+                            break;
+                        }
+                    }
+                }
+            }
+            found.unwrap_or((CGPoint::new(pos.x, pos.y), CGSize::new(sz.width, sz.height)))
+        };
+        log::debug!(
+            "  Table[{}]: scroll_area position=({:.0},{:.0}) size=({:.0}x{:.0})",
+            ti,
+            tbl_pos.x,
+            tbl_pos.y,
+            tbl_sz.width,
+            tbl_sz.height
+        );
+
         let cells = unsafe { ax_elements(row, "AXChildren") }.unwrap_or_default();
 
         let title = if cells.len() > 5 {
@@ -366,6 +409,9 @@ unsafe fn get_track_from_swinsian(pid: i32) -> Option<TrackInfo> {
         for &c in &cells {
             unsafe { CFRelease(c as _) };
         }
+        for &sa in &scroll_areas {
+            unsafe { CFRelease(sa as _) };
+        }
         for &t in &tables {
             unsafe { CFRelease(t as _) };
         }
@@ -384,6 +430,8 @@ unsafe fn get_track_from_swinsian(pid: i32) -> Option<TrackInfo> {
             file_path,
             position: pos,
             size: sz,
+            table_position: tbl_pos,
+            table_size: tbl_sz,
         });
     }
     None
@@ -452,6 +500,12 @@ unsafe fn get_track_from_itunes(pid: i32) -> Option<TrackInfo> {
         let pos = unsafe { ax_point(row, "AXPosition") }?;
         let sz = unsafe { ax_size(row, "AXSize") }?;
 
+        // テーブルの可視領域の位置・サイズを取得
+        let tbl_pos =
+            unsafe { ax_point(table, "AXPosition") }.unwrap_or(CGPoint::new(pos.x, pos.y));
+        let tbl_sz =
+            unsafe { ax_size(table, "AXSize") }.unwrap_or(CGSize::new(sz.width, sz.height));
+
         let meta = itunes_metadata_via_applescript();
         let title = meta.as_ref().map(|m| m.0.clone()).unwrap_or_default();
         let artist = meta.as_ref().map(|m| m.1.clone()).unwrap_or_default();
@@ -478,6 +532,8 @@ unsafe fn get_track_from_itunes(pid: i32) -> Option<TrackInfo> {
             file_path,
             position: pos,
             size: sz,
+            table_position: tbl_pos,
+            table_size: tbl_sz,
         });
     }
     None
