@@ -17,7 +17,7 @@ use std::path::Path;
 /// - `{artist}`: アーティスト名
 /// - `{artwork}`: アートワーク相対パス
 const DEFAULT_LINE_TEMPLATE: &str =
-    "{no}. **{time}** (+{elapsed}) Deck {deck} | {title} / {artist}";
+    "- {no}. **{time}** (+{elapsed}) Deck {deck}｜{title} / {artist}";
 
 /// アートワーク画像の最大サイズ（px）。この値を1辺とする正方形に収まるようリサイズする。
 const ARTWORK_MAX_SIZE: u32 = 640;
@@ -34,7 +34,7 @@ fn render_line(
     artwork: &str,
 ) -> String {
     template
-        .replace("{no}", &no.to_string())
+        .replace("{no}", &format!("{:03}", no))
         .replace("{time}", time)
         .replace("{elapsed}", elapsed)
         .replace("{deck}", &deck.to_string())
