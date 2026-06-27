@@ -22,7 +22,7 @@ struct Cli {
     no_activate: bool,
 
     /// セッションログを配置するディレクトリ（未指定時はログ機能無効）
-    #[arg(long)]
+    #[arg(short = 'S', long)]
     session_dir: Option<String>,
 }
 
