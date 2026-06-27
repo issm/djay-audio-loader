@@ -41,3 +41,4 @@ chrono = { version = "0.4.44", features = ["now"] }
 # アートワーク抽出（将来の拡張用）
 id3 = "1.13"
 mp4ameta = "0.11"
+image = "0.25.10"

@@ -82,6 +82,8 @@ struct TapContext {
     drag_binary: String,
     drop_delay: u64,
     no_activate: bool,
+    /// セッションログファイルのパス（None = ログ機能無効）
+    session_file: Option<String>,
     /// タップ自身への参照（再有効化のため）
     tap: CFMachPortRef,
     /// 実行中フラグ（多重起動防止）
@@ -141,8 +143,15 @@ unsafe extern "C" fn event_tap_callback(
             let deck = hk.deck;
             let drop_delay = ctx.drop_delay;
             let no_activate = ctx.no_activate;
+            let session_file = ctx.session_file.clone();
             std::thread::spawn(move || {
-                invoke_drag(&binary, deck, drop_delay, no_activate);
+                invoke_drag(
+                    &binary,
+                    deck,
+                    drop_delay,
+                    no_activate,
+                    session_file.as_deref(),
+                );
                 *running.lock().unwrap() = false;
             });
 
@@ -172,7 +181,13 @@ fn resolve_drag_binary(override_path: &Option<String>) -> String {
     "drag-into-djay".to_string()
 }
 
-fn invoke_drag(binary: &str, deck: u8, drop_delay: u64, no_activate: bool) {
+fn invoke_drag(
+    binary: &str,
+    deck: u8,
+    drop_delay: u64,
+    no_activate: bool,
+    session_file: Option<&str>,
+) {
     let mut args = vec![
         "--deck".to_string(),
         deck.to_string(),
@@ -181,6 +196,10 @@ fn invoke_drag(binary: &str, deck: u8, drop_delay: u64, no_activate: bool) {
     ];
     if no_activate {
         args.push("--no-activate".to_string());
+    }
+    if let Some(sf) = session_file {
+        args.push("--session-file".to_string());
+        args.push(sf.to_string());
     }
     let status = std::process::Command::new(binary).args(&args).status();
     match status {
@@ -203,6 +222,7 @@ pub fn run_event_loop(config: &Config) -> Result<()> {
         drag_binary,
         drop_delay: config.drop_delay,
         no_activate: config.no_activate,
+        session_file: config.session_file.clone(),
         tap: std::ptr::null_mut(),
         running: Arc::new(Mutex::new(false)),
     });

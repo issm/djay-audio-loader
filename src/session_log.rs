@@ -1,0 +1,246 @@
+// session_log.rs
+// セッションログファイルへのトラック情報追記
+
+use crate::track::TrackInfo;
+use anyhow::Result;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::Path;
+
+/// 行テンプレートで使用可能な変数
+///
+/// - `{no}`: 連番
+/// - `{time}`: ロード時刻 (HH:MM:SS)
+/// - `{elapsed}`: 1曲目からの経過時間 (H:MM:SS)
+/// - `{deck}`: デッキ番号
+/// - `{title}`: 曲名
+/// - `{artist}`: アーティスト名
+/// - `{artwork}`: アートワーク相対パス
+const DEFAULT_LINE_TEMPLATE: &str =
+    "- {no}. **{time}** (+{elapsed}) Deck {deck}｜{title} / {artist}";
+
+/// アートワーク画像の最大サイズ（px）。この値を1辺とする正方形に収まるようリサイズする。
+const ARTWORK_MAX_SIZE: u32 = 640;
+
+/// テンプレートに変数を適用して1行を生成する
+fn render_line(
+    template: &str,
+    no: u32,
+    time: &str,
+    elapsed: &str,
+    deck: u8,
+    title: &str,
+    artist: &str,
+    artwork: &str,
+) -> String {
+    template
+        .replace("{no}", &format!("{:03}", no))
+        .replace("{time}", time)
+        .replace("{elapsed}", elapsed)
+        .replace("{deck}", &deck.to_string())
+        .replace("{title}", title)
+        .replace("{artist}", artist)
+        .replace("{artwork}", artwork)
+}
+
+/// セッションファイルから現在の行数（= 次の連番）を取得する
+fn count_entries(session_file: &Path) -> u32 {
+    let content = std::fs::read_to_string(session_file).unwrap_or_default();
+    // フロントマター以降の行で、番号付きリスト項目をカウント
+    let mut in_body = false;
+    let mut frontmatter_delimiters = 0;
+    let mut count = 0u32;
+    for line in content.lines() {
+        if line.trim() == "---" {
+            frontmatter_delimiters += 1;
+            if frontmatter_delimiters == 2 {
+                in_body = true;
+            }
+            continue;
+        }
+        if in_body && !line.trim().is_empty() {
+            count += 1;
+        }
+    }
+    count
+}
+
+/// 1曲目の時刻を取得する（経過時間の計算に使用）
+fn first_entry_time(session_file: &Path) -> Option<chrono::NaiveTime> {
+    let content = std::fs::read_to_string(session_file).ok()?;
+    let mut in_body = false;
+    let mut frontmatter_delimiters = 0;
+    for line in content.lines() {
+        if line.trim() == "---" {
+            frontmatter_delimiters += 1;
+            if frontmatter_delimiters == 2 {
+                in_body = true;
+            }
+            continue;
+        }
+        if in_body && !line.trim().is_empty() {
+            // "1. **HH:MM:SS** ..." から時刻を抽出
+            if let Some(start) = line.find("**") {
+                if let Some(end) = line[start + 2..].find("**") {
+                    let time_str = &line[start + 2..start + 2 + end];
+                    return chrono::NaiveTime::parse_from_str(time_str, "%H:%M:%S").ok();
+                }
+            }
+            return None;
+        }
+    }
+    None
+}
+
+/// 経過時間をフォーマットする (H:MM:SS)
+fn format_elapsed(elapsed_secs: i64) -> String {
+    let h = elapsed_secs / 3600;
+    let m = (elapsed_secs % 3600) / 60;
+    let s = elapsed_secs % 60;
+    format!("{}:{:02}:{:02}", h, m, s)
+}
+
+/// セッションファイルにトラック情報を1行追記する
+pub fn append_track(session_file: &str, track: &TrackInfo, deck: u8) -> Result<()> {
+    let path = Path::new(session_file);
+    let now = chrono::Local::now();
+    let time_str = now.format("%H:%M:%S").to_string();
+
+    // 連番
+    let no = count_entries(path) + 1;
+
+    // 経過時間
+    let elapsed = if no == 1 {
+        "0:00:00".to_string()
+    } else {
+        let current_time = now.time();
+        match first_entry_time(path) {
+            Some(first_time) => {
+                let diff = current_time.signed_duration_since(first_time);
+                format_elapsed(diff.num_seconds().max(0))
+            }
+            None => "0:00:00".to_string(),
+        }
+    };
+
+    // アートワーク抽出
+    let artwork = if !track.file_path.is_empty() {
+        let artworks_dir = path.parent().unwrap().join("artworks");
+        match extract_artwork(&track.file_path, &artworks_dir, no) {
+            Some(filename) => format!("artworks/{}", filename),
+            None => String::new(),
+        }
+    } else {
+        String::new()
+    };
+
+    let line = render_line(
+        DEFAULT_LINE_TEMPLATE,
+        no,
+        &time_str,
+        &elapsed,
+        deck,
+        &track.title,
+        &track.artist,
+        &artwork,
+    );
+
+    // open → write → close
+    let mut file = OpenOptions::new().create(true).append(true).open(path)?;
+    writeln!(file, "{}", line)?;
+
+    log::info!("セッションログ追記: {}", line);
+    Ok(())
+}
+
+/// 楽曲ファイルからアートワークを抽出して artworks/ に保存する
+/// 成功時はファイル名（例: "001.jpg"）を返す。アートワークがない場合は None。
+fn extract_artwork(file_path: &str, artworks_dir: &Path, no: u32) -> Option<String> {
+    let ext = Path::new(file_path).extension()?.to_str()?.to_lowercase();
+
+    let (data, mime) = match ext.as_str() {
+        "mp3" => extract_artwork_mp3(file_path)?,
+        "m4a" | "mp4" | "aac" => extract_artwork_m4a(file_path)?,
+        _ => {
+            log::debug!("アートワーク抽出: 未対応の拡張子 ({})", ext);
+            return None;
+        }
+    };
+
+    // MIME タイプから拡張子を決定
+    let img_ext = match mime.as_str() {
+        "image/png" => "png",
+        _ => "jpg",
+    };
+
+    let filename = format!("{:03}.{}", no, img_ext);
+    let out_path = artworks_dir.join(&filename);
+
+    // 指定サイズに収まるようリサイズ
+    let resized_data = match resize_artwork(&data, img_ext, ARTWORK_MAX_SIZE) {
+        Some(d) => d,
+        None => data, // リサイズ失敗時は元データをそのまま保存
+    };
+
+    match std::fs::write(&out_path, &resized_data) {
+        Ok(_) => {
+            log::debug!(
+                "アートワーク保存: {} ({} bytes)",
+                out_path.display(),
+                resized_data.len()
+            );
+            Some(filename)
+        }
+        Err(e) => {
+            log::warn!("アートワーク保存失敗: {}", e);
+            None
+        }
+    }
+}
+
+/// MP3 ファイルから APIC フレームのデータを抽出
+fn extract_artwork_mp3(file_path: &str) -> Option<(Vec<u8>, String)> {
+    let tag = id3::Tag::read_from_path(file_path).ok()?;
+    let pic = tag.pictures().next()?;
+    Some((pic.data.clone(), pic.mime_type.clone()))
+}
+
+/// M4A ファイルからアートワークデータを抽出
+fn extract_artwork_m4a(file_path: &str) -> Option<(Vec<u8>, String)> {
+    let tag = mp4ameta::Tag::read_from_path(file_path).ok()?;
+    let artwork = tag.artworks().next()?;
+    let (data, mime) = match artwork.fmt {
+        mp4ameta::ImgFmt::Jpeg => (artwork.data.to_vec(), "image/jpeg".to_string()),
+        mp4ameta::ImgFmt::Png => (artwork.data.to_vec(), "image/png".to_string()),
+        _ => (artwork.data.to_vec(), "image/jpeg".to_string()),
+    };
+    Some((data, mime))
+}
+
+/// アートワーク画像を指定サイズの正方形に収まるようリサイズする
+/// 既にサイズ内の場合はそのまま返す
+fn resize_artwork(data: &[u8], img_ext: &str, max_size: u32) -> Option<Vec<u8>> {
+    use image::ImageReader;
+    use std::io::Cursor;
+
+    let img = ImageReader::new(Cursor::new(data))
+        .with_guessed_format()
+        .ok()?
+        .decode()
+        .ok()?;
+
+    let (w, h) = (img.width(), img.height());
+    if w <= max_size && h <= max_size {
+        // リサイズ不要 — 元データをそのまま返す
+        return Some(data.to_vec());
+    }
+
+    let resized = img.resize(max_size, max_size, image::imageops::FilterType::Lanczos3);
+
+    let mut buf = Cursor::new(Vec::new());
+    match img_ext {
+        "png" => resized.write_to(&mut buf, image::ImageFormat::Png).ok()?,
+        _ => resized.write_to(&mut buf, image::ImageFormat::Jpeg).ok()?,
+    }
+    Some(buf.into_inner())
+}

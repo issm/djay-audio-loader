@@ -2,6 +2,7 @@ mod cli;
 mod drag;
 mod logger;
 mod notify;
+mod session_log;
 mod track;
 
 use anyhow::Result;
@@ -42,6 +43,13 @@ fn run() -> Result<()> {
 
     drag::drag_to_djay(&track, args.deck, args.drop_delay, args.no_activate)?;
     log::info!("ドラッグ完了: デッキ {} にロードしました", args.deck);
+
+    // セッションログ追記
+    if let Some(ref session_file) = args.session_file {
+        if let Err(e) = session_log::append_track(session_file, &track, args.deck) {
+            log::warn!("セッションログの追記に失敗しました: {}", e);
+        }
+    }
 
     // 成功通知
     if let Err(e) = notify::notify_success(&track, args.deck) {

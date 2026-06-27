@@ -50,6 +50,8 @@ pub struct Config {
     pub drop_delay: u64,
     /// --no-activate を drag-into-djay に渡すか
     pub no_activate: bool,
+    /// セッションログファイルのパス（None = ログ機能無効）
+    pub session_file: Option<String>,
 }
 
 impl Config {
@@ -79,6 +81,7 @@ impl Config {
             drag_binary: None,
             drop_delay: 250,
             no_activate: true,
+            session_file: None,
         }
     }
 }
