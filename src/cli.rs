@@ -17,6 +17,10 @@ pub struct Cli {
     /// アプリのアクティブ化をスキップする（helper から呼ぶ場合など）
     #[arg(long, default_value_t = false)]
     pub no_activate: bool,
+
+    /// セッションログファイルのパス（helper から渡される）
+    #[arg(long, value_name = "PATH")]
+    pub session_file: Option<String>,
 }
 
 pub fn parse() -> Cli {
