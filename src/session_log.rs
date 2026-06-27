@@ -120,8 +120,16 @@ pub fn append_track(session_file: &str, track: &TrackInfo, deck: u8) -> Result<(
         }
     };
 
-    // TODO: アートワーク抽出は後続で実装
-    let artwork = String::new();
+    // アートワーク抽出
+    let artwork = if !track.file_path.is_empty() {
+        let artworks_dir = path.parent().unwrap().join("artworks");
+        match extract_artwork(&track.file_path, &artworks_dir, no) {
+            Some(filename) => format!("artworks/{}", filename),
+            None => String::new(),
+        }
+    } else {
+        String::new()
+    };
 
     let line = render_line(
         DEFAULT_LINE_TEMPLATE,
@@ -140,4 +148,62 @@ pub fn append_track(session_file: &str, track: &TrackInfo, deck: u8) -> Result<(
 
     log::info!("セッションログ追記: {}", line);
     Ok(())
+}
+
+/// 楽曲ファイルからアートワークを抽出して artworks/ に保存する
+/// 成功時はファイル名（例: "001.jpg"）を返す。アートワークがない場合は None。
+fn extract_artwork(file_path: &str, artworks_dir: &Path, no: u32) -> Option<String> {
+    let ext = Path::new(file_path).extension()?.to_str()?.to_lowercase();
+
+    let (data, mime) = match ext.as_str() {
+        "mp3" => extract_artwork_mp3(file_path)?,
+        "m4a" | "mp4" | "aac" => extract_artwork_m4a(file_path)?,
+        _ => {
+            log::debug!("アートワーク抽出: 未対応の拡張子 ({})", ext);
+            return None;
+        }
+    };
+
+    // MIME タイプから拡張子を決定
+    let img_ext = match mime.as_str() {
+        "image/png" => "png",
+        _ => "jpg",
+    };
+
+    let filename = format!("{:03}.{}", no, img_ext);
+    let out_path = artworks_dir.join(&filename);
+
+    match std::fs::write(&out_path, &data) {
+        Ok(_) => {
+            log::debug!(
+                "アートワーク保存: {} ({} bytes)",
+                out_path.display(),
+                data.len()
+            );
+            Some(filename)
+        }
+        Err(e) => {
+            log::warn!("アートワーク保存失敗: {}", e);
+            None
+        }
+    }
+}
+
+/// MP3 ファイルから APIC フレームのデータを抽出
+fn extract_artwork_mp3(file_path: &str) -> Option<(Vec<u8>, String)> {
+    let tag = id3::Tag::read_from_path(file_path).ok()?;
+    let pic = tag.pictures().next()?;
+    Some((pic.data.clone(), pic.mime_type.clone()))
+}
+
+/// M4A ファイルからアートワークデータを抽出
+fn extract_artwork_m4a(file_path: &str) -> Option<(Vec<u8>, String)> {
+    let tag = mp4ameta::Tag::read_from_path(file_path).ok()?;
+    let artwork = tag.artworks().next()?;
+    let (data, mime) = match artwork.fmt {
+        mp4ameta::ImgFmt::Jpeg => (artwork.data.to_vec(), "image/jpeg".to_string()),
+        mp4ameta::ImgFmt::Png => (artwork.data.to_vec(), "image/png".to_string()),
+        _ => (artwork.data.to_vec(), "image/jpeg".to_string()),
+    };
+    Some((data, mime))
 }
