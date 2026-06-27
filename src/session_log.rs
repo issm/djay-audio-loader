@@ -19,6 +19,9 @@ use std::path::Path;
 const DEFAULT_LINE_TEMPLATE: &str =
     "{no}. **{time}** (+{elapsed}) Deck {deck} | {title} / {artist}";
 
+/// アートワーク画像の最大サイズ（px）。この値を1辺とする正方形に収まるようリサイズする。
+const ARTWORK_MAX_SIZE: u32 = 640;
+
 /// テンプレートに変数を適用して1行を生成する
 fn render_line(
     template: &str,
@@ -173,12 +176,18 @@ fn extract_artwork(file_path: &str, artworks_dir: &Path, no: u32) -> Option<Stri
     let filename = format!("{:03}.{}", no, img_ext);
     let out_path = artworks_dir.join(&filename);
 
-    match std::fs::write(&out_path, &data) {
+    // 指定サイズに収まるようリサイズ
+    let resized_data = match resize_artwork(&data, img_ext, ARTWORK_MAX_SIZE) {
+        Some(d) => d,
+        None => data, // リサイズ失敗時は元データをそのまま保存
+    };
+
+    match std::fs::write(&out_path, &resized_data) {
         Ok(_) => {
             log::debug!(
                 "アートワーク保存: {} ({} bytes)",
                 out_path.display(),
-                data.len()
+                resized_data.len()
             );
             Some(filename)
         }
@@ -206,4 +215,32 @@ fn extract_artwork_m4a(file_path: &str) -> Option<(Vec<u8>, String)> {
         _ => (artwork.data.to_vec(), "image/jpeg".to_string()),
     };
     Some((data, mime))
+}
+
+/// アートワーク画像を指定サイズの正方形に収まるようリサイズする
+/// 既にサイズ内の場合はそのまま返す
+fn resize_artwork(data: &[u8], img_ext: &str, max_size: u32) -> Option<Vec<u8>> {
+    use image::ImageReader;
+    use std::io::Cursor;
+
+    let img = ImageReader::new(Cursor::new(data))
+        .with_guessed_format()
+        .ok()?
+        .decode()
+        .ok()?;
+
+    let (w, h) = (img.width(), img.height());
+    if w <= max_size && h <= max_size {
+        // リサイズ不要 — 元データをそのまま返す
+        return Some(data.to_vec());
+    }
+
+    let resized = img.resize(max_size, max_size, image::imageops::FilterType::Lanczos3);
+
+    let mut buf = Cursor::new(Vec::new());
+    match img_ext {
+        "png" => resized.write_to(&mut buf, image::ImageFormat::Png).ok()?,
+        _ => resized.write_to(&mut buf, image::ImageFormat::Jpeg).ok()?,
+    }
+    Some(buf.into_inner())
 }
