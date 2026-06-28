@@ -125,6 +125,12 @@ djay-audio-loader-helper [OPTIONS]
 | オプション | 説明 | デフォルト |
 |---|---|---|
 | `--no-activate` | `drag-into-djay` に `--no-activate` を渡す | `false` |
+| `-D, --session-basedir <DIR>` | セッションログのベースディレクトリ | なし |
+| `-S, --session-dir <DIR>` | セッションディレクトリを直接指定 | なし |
+| `--ndp-publish <PATH>` | ndp-publish バイナリのフルパス（未指定時は NDP 機能無効） | なし |
+| `--ndp-out <DIR>` | ndp-publish の出力先ベースディレクトリ（`--ndp-publish` 指定時は必須） | なし |
+| `--ndp-dj-id <ID>` | ndp-publish の DJ ID | `dj-000` |
+| `--ndp-dj-name <NAME>` | ndp-publish の DJ 名（テキスト or ロゴ画像パス） | なし |
 
 **デフォルトホットキー:**
 
@@ -132,6 +138,7 @@ djay-audio-loader-helper [OPTIONS]
 |---|---|
 | `Ctrl+Shift+1` | デッキ1にロード |
 | `Ctrl+Shift+0` | デッキ2にロード |
+| `Ctrl+Shift+5` | 最新のロード曲情報で ndp-publish を実行 |
 
 **動作:**
 
@@ -139,3 +146,23 @@ djay-audio-loader-helper [OPTIONS]
 - ホットキーイベントは消費され、他のアプリには伝達されない
 - `drag-into-djay` の実行中に再度ホットキーを押した場合はスキップ（多重起動防止）
 - `djay-audio-loader-helper` と `drag-into-djay` は同じディレクトリに配置すること
+
+#### NDP (Now DJ Playing) 連携
+
+[now-dj-playing](https://github.com/issm/now-dj-playing) の `ndp-publish` CLI と連携し、再生中の楽曲情報をリアルタイムに viewer アプリへ共有する。
+
+- `--ndp-publish` を指定すると NDP 機能が有効化される
+- デッキへのロード成功時に helper が最新の楽曲情報を保持
+- `Ctrl+Shift+5` で保持中の楽曲情報を基に ndp-publish を実行
+- helper 起動時に出力先ディレクトリをクリンナップ（前回セッションの残存データを削除）
+
+**例:**
+
+```sh
+djay-audio-loader-helper \
+  --no-activate \
+  --ndp-publish /path/to/ndp-publish \
+  --ndp-out ~/Library/Mobile\ Documents/com~apple~CloudDocs/NowDJPlaying \
+  --ndp-dj-id dj-issm \
+  --ndp-dj-name "issm"
+```
