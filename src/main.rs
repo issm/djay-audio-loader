@@ -56,6 +56,11 @@ fn run() -> Result<()> {
         log::warn!("通知の送信に失敗しました: {}", e);
     }
 
+    // track_info を JSON で stdout に出力（helper が受け取る）
+    if let Ok(json) = serde_json::to_string(&track) {
+        println!("{}", json);
+    }
+
     Ok(())
 }
 

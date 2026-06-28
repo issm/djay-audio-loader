@@ -221,7 +221,7 @@ fn normalize_duration(s: &str) -> String {
 
 // ---- TrackInfo -------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[allow(dead_code)]
 pub struct TrackInfo {
     pub source: String,
@@ -231,12 +231,66 @@ pub struct TrackInfo {
     pub duration: String,
     pub comment: String,
     pub file_path: String,
+    #[serde(
+        serialize_with = "serialize_cgpoint",
+        deserialize_with = "deserialize_cgpoint"
+    )]
     pub position: CGPoint,
+    #[serde(
+        serialize_with = "serialize_cgsize",
+        deserialize_with = "deserialize_cgsize"
+    )]
     pub size: CGSize,
     /// テーブル（スクロールエリア）の可視領域の位置
+    #[serde(
+        serialize_with = "serialize_cgpoint",
+        deserialize_with = "deserialize_cgpoint"
+    )]
     pub table_position: CGPoint,
     /// テーブル（スクロールエリア）の可視領域のサイズ
+    #[serde(
+        serialize_with = "serialize_cgsize",
+        deserialize_with = "deserialize_cgsize"
+    )]
     pub table_size: CGSize,
+}
+
+fn serialize_cgpoint<S: serde::Serializer>(p: &CGPoint, s: S) -> Result<S::Ok, S::Error> {
+    use serde::ser::SerializeStruct;
+    let mut st = s.serialize_struct("CGPoint", 2)?;
+    st.serialize_field("x", &p.x)?;
+    st.serialize_field("y", &p.y)?;
+    st.end()
+}
+
+fn deserialize_cgpoint<'de, D: serde::Deserializer<'de>>(d: D) -> Result<CGPoint, D::Error> {
+    use serde::Deserialize;
+    #[derive(serde::Deserialize)]
+    struct P {
+        x: f64,
+        y: f64,
+    }
+    let p = P::deserialize(d)?;
+    Ok(CGPoint::new(p.x, p.y))
+}
+
+fn serialize_cgsize<S: serde::Serializer>(sz: &CGSize, s: S) -> Result<S::Ok, S::Error> {
+    use serde::ser::SerializeStruct;
+    let mut st = s.serialize_struct("CGSize", 2)?;
+    st.serialize_field("width", &sz.width)?;
+    st.serialize_field("height", &sz.height)?;
+    st.end()
+}
+
+fn deserialize_cgsize<'de, D: serde::Deserializer<'de>>(d: D) -> Result<CGSize, D::Error> {
+    use serde::Deserialize;
+    #[derive(serde::Deserialize)]
+    struct S {
+        width: f64,
+        height: f64,
+    }
+    let sz = S::deserialize(d)?;
+    Ok(CGSize::new(sz.width, sz.height))
 }
 
 // ---- Swinsian --------------------------------------------------------------

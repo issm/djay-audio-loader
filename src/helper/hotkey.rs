@@ -5,7 +5,25 @@ use anyhow::{Result, anyhow};
 use std::ffi::c_void;
 use std::sync::{Arc, Mutex};
 
-use crate::config::{Config, HotkeyDef};
+use crate::config::{Config, HotkeyDef, NdpConfig};
+
+// ---- TrackInfo (JSON デシリアライズ用) --------------------------------------
+
+/// drag-into-djay が stdout に出力する TrackInfo の JSON をパースする構造体
+#[derive(Debug, Clone, serde::Deserialize)]
+struct TrackInfo {
+    #[allow(dead_code)]
+    source: String,
+    title: String,
+    artist: String,
+    #[allow(dead_code)]
+    album: String,
+    #[allow(dead_code)]
+    duration: String,
+    #[allow(dead_code)]
+    comment: String,
+    file_path: String,
+}
 
 // ---- CGEventTap FFI --------------------------------------------------------
 
@@ -79,15 +97,21 @@ unsafe extern "C" {
 
 struct TapContext {
     hotkeys: Vec<HotkeyDef>,
+    /// NDP publish ホットキー
+    hotkey_ndp: HotkeyDef,
     drag_binary: String,
     drop_delay: u64,
     no_activate: bool,
     /// セッションログファイルのパス（None = ログ機能無効）
     session_file: Option<String>,
+    /// NDP Publisher 設定（None = NDP 機能無効）
+    ndp: Option<NdpConfig>,
     /// タップ自身への参照（再有効化のため）
     tap: CFMachPortRef,
     /// 実行中フラグ（多重起動防止）
     running: Arc<Mutex<bool>>,
+    /// 最新の track_info（drag-into-djay 成功時に更新）
+    latest_track: Arc<Mutex<Option<TrackInfo>>>,
 }
 
 // CFMachPortRef は *mut c_void なので Send を手動実装
@@ -123,6 +147,31 @@ unsafe extern "C" fn event_tap_callback(
     const MOD_MASK: u64 = 0x0002_0000 | 0x0004_0000 | 0x0008_0000 | 0x0010_0000;
     let flags_masked = flags & MOD_MASK;
 
+    // --- NDP publish ホットキー (Ctrl+Shift+5) ---
+    if ctx.hotkey_ndp.keycode == keycode && ctx.hotkey_ndp.modifiers.as_cg_flags() == flags_masked {
+        log::info!("ホットキー検出: keycode={} → NDP publish", keycode);
+
+        if ctx.ndp.is_none() {
+            log::warn!("NDP Publisher 未設定のためスキップ");
+            return std::ptr::null_mut();
+        }
+
+        let latest_track = ctx.latest_track.clone();
+        let ndp = ctx.ndp.clone().unwrap();
+
+        std::thread::spawn(move || {
+            let track = latest_track.lock().unwrap().clone();
+            match track {
+                Some(t) => invoke_ndp_publish(&ndp, &t),
+                None => log::warn!("NDP publish: まだトラック情報がありません"),
+            }
+        });
+
+        // イベントを消費
+        return std::ptr::null_mut();
+    }
+
+    // --- デッキロードホットキー (Ctrl+Shift+1, Ctrl+Shift+0) ---
     for hk in &ctx.hotkeys {
         if hk.keycode == keycode && hk.modifiers.as_cg_flags() == flags_masked {
             log::info!("ホットキー検出: keycode={} → デッキ{}", keycode, hk.deck);
@@ -144,14 +193,20 @@ unsafe extern "C" fn event_tap_callback(
             let drop_delay = ctx.drop_delay;
             let no_activate = ctx.no_activate;
             let session_file = ctx.session_file.clone();
+            let latest_track = ctx.latest_track.clone();
             std::thread::spawn(move || {
-                invoke_drag(
+                let track_info = invoke_drag(
                     &binary,
                     deck,
                     drop_delay,
                     no_activate,
                     session_file.as_deref(),
                 );
+                // 成功時に最新 track_info を更新
+                if let Some(info) = track_info {
+                    log::info!("track_info 更新: {} / {}", info.title, info.artist);
+                    *latest_track.lock().unwrap() = Some(info);
+                }
                 *running.lock().unwrap() = false;
             });
 
@@ -181,13 +236,14 @@ fn resolve_drag_binary(override_path: &Option<String>) -> String {
     "drag-into-djay".to_string()
 }
 
+/// drag-into-djay を実行し、成功時に stdout から TrackInfo をパースして返す
 fn invoke_drag(
     binary: &str,
     deck: u8,
     drop_delay: u64,
     no_activate: bool,
     session_file: Option<&str>,
-) {
+) -> Option<TrackInfo> {
     let mut args = vec![
         "--deck".to_string(),
         deck.to_string(),
@@ -201,11 +257,70 @@ fn invoke_drag(
         args.push("--session-file".to_string());
         args.push(sf.to_string());
     }
-    let status = std::process::Command::new(binary).args(&args).status();
+
+    let output = std::process::Command::new(binary).args(&args).output();
+    match output {
+        Ok(o) if o.status.success() => {
+            log::info!("drag-into-djay 完了");
+            // stdout から TrackInfo JSON をパース
+            let stdout = String::from_utf8_lossy(&o.stdout);
+            // 最後の行が JSON のはず（ログは stderr に出力される）
+            let json_line = stdout.lines().last().unwrap_or("");
+            match serde_json::from_str::<TrackInfo>(json_line) {
+                Ok(info) => Some(info),
+                Err(e) => {
+                    log::warn!("track_info パース失敗: {} (stdout: {})", e, stdout.trim());
+                    None
+                }
+            }
+        }
+        Ok(o) => {
+            log::warn!("drag-into-djay 終了コード: {}", o.status);
+            None
+        }
+        Err(e) => {
+            log::error!("drag-into-djay 起動失敗: {}", e);
+            None
+        }
+    }
+}
+
+// ---- ndp-publish 呼び出し --------------------------------------------------
+
+fn invoke_ndp_publish(ndp: &NdpConfig, track: &TrackInfo) {
+    if track.file_path.is_empty() {
+        log::warn!("NDP publish: file_path が空のためスキップ");
+        return;
+    }
+
+    let mut args = vec![
+        "--file".to_string(),
+        track.file_path.clone(),
+        "--out".to_string(),
+        ndp.out_dir.clone(),
+    ];
+    if let Some(ref id) = ndp.dj_id {
+        args.push("--id".to_string());
+        args.push(id.clone());
+    }
+    if let Some(ref name) = ndp.dj_name {
+        args.push("--dj-name".to_string());
+        args.push(name.clone());
+    }
+
+    log::info!(
+        "NDP publish 実行: {} {}",
+        ndp.publisher_binary,
+        args.join(" ")
+    );
+
+    let status = std::process::Command::new(&ndp.publisher_binary)
+        .args(&args)
+        .status();
     match status {
-        Ok(s) if s.success() => log::info!("drag-into-djay 完了"),
-        Ok(s) => log::warn!("drag-into-djay 終了コード: {}", s),
-        Err(e) => log::error!("drag-into-djay 起動失敗: {}", e),
+        Ok(s) if s.success() => log::info!("NDP publish 完了: {} - {}", track.artist, track.title),
+        Ok(s) => log::warn!("NDP publish 終了コード: {}", s),
+        Err(e) => log::error!("NDP publish 起動失敗: {}", e),
     }
 }
 
@@ -215,16 +330,24 @@ pub fn run_event_loop(config: &Config) -> Result<()> {
     let drag_binary = resolve_drag_binary(&config.drag_binary);
     log::info!("drag-into-djay パス: {}", drag_binary);
 
+    if let Some(ref ndp) = config.ndp {
+        log::info!("NDP publish ホットキー: Ctrl+Shift+5");
+        log::info!("NDP publish binary: {}", ndp.publisher_binary);
+    }
+
     // tap は後で ctx に入れるため、一旦ダミーで Box を作り raw ポインタを確保してから
     // tap 作成後に書き込む
     let ctx = Box::new(TapContext {
         hotkeys: vec![config.hotkey_deck1.clone(), config.hotkey_deck2.clone()],
+        hotkey_ndp: config.hotkey_ndp_publish.clone(),
         drag_binary,
         drop_delay: config.drop_delay,
         no_activate: config.no_activate,
         session_file: config.session_file.clone(),
+        ndp: config.ndp.clone(),
         tap: std::ptr::null_mut(),
         running: Arc::new(Mutex::new(false)),
+        latest_track: Arc::new(Mutex::new(None)),
     });
     let ctx_ptr = Box::into_raw(ctx);
 
