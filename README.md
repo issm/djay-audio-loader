@@ -9,10 +9,14 @@ flowchart TD
     subgraph helper["djay-audio-loader-helper"]
         config["config.rs\n(設定読込)"]
         hotkey["hotkey.rs\n(CGEventTap 監視)"]
+        latest_track["latest_track\n(最新トラック情報保持)"]
         config --> hotkey
+        hotkey --> latest_track
     end
 
-    hotkey -->|サブプロセス起動| main
+    hotkey -->|"Ctrl+Shift+1/0\nサブプロセス起動"| main
+    main -->|"stdout JSON"| latest_track
+    hotkey -->|"Ctrl+Shift+5"| ndp_publish
 
     subgraph did["drag-into-djay"]
         main["main.rs"]
@@ -35,14 +39,25 @@ flowchart TD
 
     track -.->|選択行の座標・メタ情報| drag
 
-    Swinsian(["Swinsian"])
-    MusicApp(["Music.app"])
-    djayPro(["djay Pro"])
+    subgraph apps["外部アプリケーション"]
+        Swinsian(["Swinsian"])
+        MusicApp(["Music.app"])
+        djayPro(["djay Pro"])
+    end
 
     ax_swinsian <-->|Accessibility API| Swinsian
     osascript <-->|AppleScript| MusicApp
     ax_djay <-->|Accessibility API| djayPro
     cgevent -->|ドラッグ&ドロップ| djayPro
+
+    subgraph ndp["ndp (now-dj-playing)"]
+        ndp_publish["ndp-publish\n(楽曲タグ・アートワーク書き出し)"]
+        shared_dir["共有ディレクトリ\n(iCloud Drive)"]
+        viewer["iPad viewer\n(now-dj-playing)"]
+        ndp_publish -->|"now_playing.json\nartwork.*\n.ready"| shared_dir
+        shared_dir -->|ファイル監視| viewer
+    end
+
 ```
 
 ## ツール構成
